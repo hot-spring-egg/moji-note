@@ -30,8 +30,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
   
   <style>
@@ -193,8 +193,8 @@
       const [errorMessage, setErrorMessage] = useState('');
       
       // ★マスが大きくなるため、ペンのデフォルトサイズを少し太めに変更 (35 -> 45)
-      const [penSize, setPenSize] = useState(45);
-      const [difficulty, setDifficulty] = useState(0.60);
+      const [penSize, setPenSize] = useState(25);
+      const [difficulty, setDifficulty] = useState(0.65);
       const [useDakuon, setUseDakuon] = useState(false);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
       
@@ -403,28 +403,40 @@
           const height = CANVAS_SIZE;
           const normalizedPaths = paths;
 
+// 1. お手本の「芯」（どれくらいなぞれたかの確認用）
           const targetCanvas = document.createElement('canvas');
           targetCanvas.width = width;
           targetCanvas.height = height;
           const targetCtx = targetCanvas.getContext('2d', { willReadFrequently: true });
-          
           targetCtx.font = `340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif`;
           targetCtx.textAlign = 'center';
           targetCtx.textBaseline = 'middle';
           targetCtx.fillStyle = '#FF0000';
           targetCtx.fillText(char, width / 2, height / 2);
-          targetCtx.lineWidth = 15;
-          targetCtx.strokeStyle = '#FF0000';
-          targetCtx.strokeText(char, width / 2, height / 2);
-
           const targetData = targetCtx.getImageData(0, 0, width, height).data;
 
+          // 2. お手本の「許容範囲」（はみ出しすぎていないかの確認用）
+          const targetCanvasFat = document.createElement('canvas');
+          targetCanvasFat.width = width;
+          targetCanvasFat.height = height;
+          const targetCtxFat = targetCanvasFat.getContext('2d', { willReadFrequently: true });
+          targetCtxFat.font = `340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif`;
+          targetCtxFat.textAlign = 'center';
+          targetCtxFat.textBaseline = 'middle';
+          targetCtxFat.fillStyle = '#FF0000';
+          targetCtxFat.fillText(char, width / 2, height / 2);
+          targetCtxFat.lineWidth = penSize * 2.5; // はみ出しを許す範囲
+          targetCtxFat.lineJoin = 'round';
+          targetCtxFat.strokeStyle = '#FF0000';
+          targetCtxFat.strokeText(char, width / 2, height / 2);
+          const targetDataFat = targetCtxFat.getImageData(0, 0, width, height).data;
+
+          // 3. ユーザーが書いた線
           const userCanvas = document.createElement('canvas');
           userCanvas.width = width;
           userCanvas.height = height;
           const userCtx = userCanvas.getContext('2d', { willReadFrequently: true });
-          
-          userCtx.lineWidth = 90;
+          userCtx.lineWidth = penSize; // 実際のペンの太さで判定
           userCtx.lineCap = 'round';
           userCtx.lineJoin = 'round';
           userCtx.strokeStyle = '#000000';
@@ -448,27 +460,37 @@
           let targetPixelCount = 0;
           let userPixelCount = 0;
           let coveredPixelCount = 0;
+          let userInsideFatCount = 0;
           const step = 4;
 
           for (let y = 0; y < height; y += step) {
             for (let x = 0; x < width; x += step) {
               const i = (y * width + x) * 4;
-              const isTarget = targetData[i + 3] > 50;
+              const isTargetCore = targetData[i + 3] > 50;
+              const isTargetFat = targetDataFat[i + 3] > 50;
               const isUser = userData[i + 3] > 50;
 
-              if (isTarget) targetPixelCount++;
-              if (isUser) userPixelCount++;
-              if (isTarget && isUser) coveredPixelCount++;
+              if (isTargetCore) targetPixelCount++;
+              if (isUser) {
+                userPixelCount++;
+                if (isTargetCore) coveredPixelCount++;
+                // ユーザーの線が許容範囲に収まっているかカウント
+                if (isTargetFat) userInsideFatCount++;
+              }
             }
           }
 
+          // ① お手本をどれくらい塗れたか
           const coverRate = targetPixelCount === 0 ? 0 : coveredPixelCount / targetPixelCount;
+          // ② ユーザーの線のうち、許容範囲に収まっている割合（はみ出していないか）
+          const insideRate = userPixelCount === 0 ? 0 : userInsideFatCount / userPixelCount;
+          // ③ 塗りつぶしチート対策
           const isNotCheating = userPixelCount < targetPixelCount * 3.5; 
           
           const userStrokeCount = paths.length;
           const isStrokeCorrect = userStrokeCount === targetStrokeCount;
 
-          let finalDifficulty = difficulty;
+          let finalDifficulty = difficulty|| 0.65;
           if (targetStrokeCount <= 2) {
             finalDifficulty -= 0.15; 
           } else if (targetStrokeCount <= 4) {
@@ -476,7 +498,8 @@
           }
           finalDifficulty = Math.max(0.30, finalDifficulty);
 
-          const isCorrect = isStrokeCorrect && (coverRate >= finalDifficulty) && isNotCheating; 
+          // ★判定条件：「画数が合う」かつ「カバー率クリア」かつ「はみ出しが少ない（70%以上枠内）」
+          const isCorrect = isStrokeCorrect && (coverRate >= finalDifficulty) && (insideRate >= 0.70) && isNotCheating;
           
           if (!isCorrect) {
             allCorrect = false;
@@ -591,9 +614,9 @@
                   <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">ペンの ふとさ</p>
                   <div className="flex justify-center gap-4 sm:gap-6">
                     {[
-                      { size: 20, label: 'ほそい' },
-                      { size: 45, label: 'ふつう' },
-                      { size: 70, label: 'ふとい' }
+                      { size: 15, label: 'ほそい' },
+                      { size: 25, label: 'ふつう' },
+                      { size: 35, label: 'ふとい' }
                     ].map(p => (
                       <button
                         key={p.size}
@@ -615,8 +638,8 @@
                   <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">はんていの きびしさ</p>
                   <div className="flex justify-center gap-2 sm:gap-4">
                     {[
-                      { rate: 0.45, label: 'かんたん' },
-                      { rate: 0.60, label: 'ふつう' },
+                      { rate: 0.60, label: 'かんたん' },
+                      { rate: 0.65, label: 'ふつう' },
                       { rate: 0.70, label: 'むずかしい' }
                     ].map(d => (
                       <button
