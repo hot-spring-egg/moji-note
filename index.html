@@ -155,7 +155,7 @@
       'ガ':4,'ギ':5,'グ':4,'ゲ':5,'ゴ':4,'ザ':5,'ジ':5,'ズ':4,'ゼ':4,'ゾ':4,
       'ダ':5,'ヂ':5,'ヅ':5,'デ':5,'ド':4,'バ':4,'ビ':4,'ブ':3,'ベ':3,'ボ':6,
       'パ':3,'ピ':3,'プ':2,'ペ':2,'ポ':5,
-      'ァ':2,'ィ':2,'ゥ':3,'ェ':3,'ォ':3,'ッ':3,'ャ':2,'ュ':2,'ョ':3,'ヮ':2
+      'ァ':2,'ィ':2,'ゥ':3,'ェ':3,'ォ':3,'ッ':3,'ャ':2,'ュ':2,'ョ':3,'ヮ':2,'ー':1,
     };
 
     const HIRAGANA_WORDS = [
@@ -174,12 +174,11 @@
     const DAKUON_REGEX = /[が-ぼぱ-ぽガ-ボパ-ポ]/;
 
     const App = () => {
-      // ▼▼ ここから追加 ▼▼
       const [isFontLoaded, setIsFontLoaded] = useState(false);
       useEffect(() => {
         document.fonts.load('10px "Klee One"').then(() => setIsFontLoaded(true));
       }, []);
-      // ▲▲ ここまで追加 ▲▲
+
       const [gameState, setGameState] = useState('TITLE'); 
       const [charType, setCharType] = useState('hiragana');
       const [playMode, setPlayMode] = useState('char');
@@ -192,7 +191,9 @@
       const [feedback, setFeedback] = useState(null);
       const [errorMessage, setErrorMessage] = useState('');
       
-      // ★マスが大きくなるため、ペンのデフォルトサイズを少し太めに変更 (35 -> 45)
+      // ★ミスしたかを記録するステート（スコア加算の判定に使用）
+      const [hasMistaked, setHasMistaked] = useState(false);
+      
       const [penSize, setPenSize] = useState(25);
       const [difficulty, setDifficulty] = useState(0.60);
       const [useDakuon, setUseDakuon] = useState(false);
@@ -206,7 +207,6 @@
       const isDrawingRef = useRef(false);
       const activeCanvasIndexRef = useRef(null);
 
-      // 解像度としてのキャンバスサイズ（描画の滑らかさのため400のまま）
       const CANVAS_SIZE = 400;
 
       const targetChars = questions.length > 0 
@@ -235,6 +235,7 @@
         setCurrentIndex(0);
         setCurrentStep('trace');
         setScore(0);
+        setHasMistaked(false); // リセット
         setGameState('PRACTICE');
         setFeedback(null);
         setErrorMessage('');
@@ -244,15 +245,36 @@
         setFeedback(null);
         setErrorMessage('');
         
-        if (currentStep === 'trace' || currentStep === 'retry_trace') {
+        if (currentStep === 'trace') {
           setCurrentStep('blind');
+          setHasMistaked(false); // ステップが変わるのでミス状態をリセット
+        } else if (currentStep === 'retry_trace') {
+          setCurrentStep('blind');
+          // リトライからお手本なしに戻る時は、ミス状態を維持する（スコアを入れないため）
         } else {
           setCurrentStep('trace');
+          setHasMistaked(false); // 次の問題へ進むのでリセット
           if (currentIndex + 1 < questions.length) {
             setCurrentIndex(i => i + 1);
           } else {
             setGameState('RESULT');
           }
+        }
+      };
+
+      // ★とばす（スキップ）処理：スコアを加算せずに強制的に次の問題へ進む
+      const skipQuestion = () => {
+        setFeedback(null);
+        setErrorMessage('');
+        pathsRef.current = [];
+        currentPathRef.current = [];
+        
+        setCurrentStep('trace');
+        setHasMistaked(false);
+        if (currentIndex + 1 < questions.length) {
+          setCurrentIndex(i => i + 1);
+        } else {
+          setGameState('RESULT');
         }
       };
 
@@ -403,7 +425,6 @@
           const height = CANVAS_SIZE;
           const normalizedPaths = paths;
 
-// 1. お手本の「芯」（どれくらいなぞれたかの確認用）
           const targetCanvas = document.createElement('canvas');
           targetCanvas.width = width;
           targetCanvas.height = height;
@@ -415,7 +436,6 @@
           targetCtx.fillText(char, width / 2, height / 2);
           const targetData = targetCtx.getImageData(0, 0, width, height).data;
 
-          // 2. お手本の「許容範囲」（はみ出しすぎていないかの確認用）
           const targetCanvasFat = document.createElement('canvas');
           targetCanvasFat.width = width;
           targetCanvasFat.height = height;
@@ -425,18 +445,17 @@
           targetCtxFat.textBaseline = 'middle';
           targetCtxFat.fillStyle = '#FF0000';
           targetCtxFat.fillText(char, width / 2, height / 2);
-          targetCtxFat.lineWidth = penSize * 2.5; // はみ出しを許す範囲
+          targetCtxFat.lineWidth = penSize * 2.5;
           targetCtxFat.lineJoin = 'round';
           targetCtxFat.strokeStyle = '#FF0000';
           targetCtxFat.strokeText(char, width / 2, height / 2);
           const targetDataFat = targetCtxFat.getImageData(0, 0, width, height).data;
 
-          // 3. ユーザーが書いた線
           const userCanvas = document.createElement('canvas');
           userCanvas.width = width;
           userCanvas.height = height;
           const userCtx = userCanvas.getContext('2d', { willReadFrequently: true });
-          userCtx.lineWidth = penSize; // 実際のペンの太さで判定
+          userCtx.lineWidth = penSize;
           userCtx.lineCap = 'round';
           userCtx.lineJoin = 'round';
           userCtx.strokeStyle = '#000000';
@@ -474,17 +493,13 @@
               if (isUser) {
                 userPixelCount++;
                 if (isTargetCore) coveredPixelCount++;
-                // ユーザーの線が許容範囲に収まっているかカウント
                 if (isTargetFat) userInsideFatCount++;
               }
             }
           }
 
-          // ① お手本をどれくらい塗れたか
           const coverRate = targetPixelCount === 0 ? 0 : coveredPixelCount / targetPixelCount;
-          // ② ユーザーの線のうち、許容範囲に収まっている割合（はみ出していないか）
           const insideRate = userPixelCount === 0 ? 0 : userInsideFatCount / userPixelCount;
-          // ③ 塗りつぶしチート対策
           const isNotCheating = userPixelCount < targetPixelCount * 3.5; 
           
           const userStrokeCount = paths.length;
@@ -498,7 +513,6 @@
           }
           finalDifficulty = Math.max(0.30, finalDifficulty);
 
-          // ★判定条件：「画数が合う」かつ「カバー率クリア」かつ「はみ出しが少ない（70%以上枠内）」
           const isCorrect = isStrokeCorrect && (coverRate >= finalDifficulty) && (insideRate >= 0.70) && isNotCheating;
           
           if (!isCorrect) {
@@ -526,7 +540,8 @@
 
         if (allCorrect) {
           setFeedback('⭕️');
-          if (currentStep !== 'retry_trace') {
+          // ★修正: 一度でも間違えていた場合（hasMistaked が true）やリトライ中はスコアを加算しない
+          if (currentStep !== 'retry_trace' && !hasMistaked) {
             setScore(s => s + 1);
           }
           setTimeout(() => {
@@ -535,6 +550,7 @@
         } else {
           setFeedback('❌');
           setErrorMessage(firstErrorMsg);
+          setHasMistaked(true); // ★追加: 一度でも間違えたらフラグを立てる
           
           if (currentStep === 'blind') {
             targetChars.forEach((char, idx) => {
@@ -565,7 +581,6 @@
 
       const maxScore = questions.length * 2; 
 
-      // ▼▼ ここから追加 ▼▼
       if (!isFontLoaded) {
         return (
           <div className="w-full h-full flex items-center justify-center bg-paper">
@@ -573,7 +588,6 @@
           </div>
         );
       }
-      // ▲▲ ここまで追加 ▲▲
 
       return (
         <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-cork">
@@ -734,7 +748,7 @@
             <div className="w-full h-full flex flex-col p-2 sm:p-4 relative">
               <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col items-center bg-paper rounded-sm shadow-xl text-gray-900 p-2 sm:p-4 overflow-hidden relative animate-open-note border border-white">
                 
-                {/* ヘッダー情報（極力コンパクトに） */}
+                {/* ヘッダー情報 */}
                 <div className="w-full flex justify-between items-center font-rounded text-base sm:text-xl text-bluegrey/70 mb-1 px-2 shrink-0">
                   <button 
                     onClick={() => setGameState('MODE_SELECT')} 
@@ -774,11 +788,10 @@
                   </div>
                 )}
 
-                {/* ★ キャンバス領域（画面の許す限り最大まで広げる） */}
+                {/* キャンバス領域 */}
                 <div className="w-full flex-1 flex justify-center items-center gap-2 sm:gap-4 my-1 min-h-0">
                   {targetChars.map((char, idx) => {
-                    // 文字数に応じて最大幅を計算し、画面高さをはみ出さないように制限をかける
-                    let maxWidth = 'min(80vw, 55vh)'; // 1文字の場合の最大サイズ
+                    let maxWidth = 'min(80vw, 55vh)'; 
                     if (playMode === 'word') {
                       maxWidth = targetChars.length === 2 ? 'min(42vw, 55vh)' : 'min(28vw, 55vh)';
                     }
@@ -813,19 +826,26 @@
                   })}
                 </div>
 
-                {/* コントロールボタン */}
-                <div className="flex gap-3 sm:gap-6 w-full justify-center shrink-0 pt-2 pb-1 px-2">
+                {/* ★追加・修正: コントロールボタン（とばすボタン追加） */}
+                <div className="flex gap-2 sm:gap-4 w-full justify-center shrink-0 pt-2 pb-1 px-2">
+                  <button 
+                    onClick={skipQuestion}
+                    disabled={feedback !== null}
+                    className="bg-bluegrey/80 text-white font-rounded py-3 px-4 sm:px-8 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-base sm:text-xl transition-all"
+                  >
+                    とばす
+                  </button>
                   <button 
                     onClick={clearCanvas}
                     disabled={feedback !== null}
-                    className="bg-gray-300 text-gray-700 font-rounded py-3 px-8 sm:px-12 rounded-full shadow-md active:translate-y-1 active:shadow-sm flex items-center gap-2 sm:gap-3 text-lg sm:text-xl transition-all"
+                    className="bg-gray-300 text-gray-700 font-rounded py-3 px-6 sm:px-10 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-base sm:text-xl transition-all"
                   >
                     けす
                   </button>
                   <button 
                     onClick={checkWriting}
                     disabled={feedback !== null}
-                    className="bg-terracotta text-white font-rounded py-3 px-10 sm:px-16 rounded-full shadow-md active:translate-y-1 active:shadow-sm flex items-center gap-2 sm:gap-3 text-xl sm:text-2xl font-bold transition-all"
+                    className="bg-terracotta text-white font-rounded py-3 px-8 sm:px-14 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-lg sm:text-2xl font-bold transition-all"
                   >
                     できた！
                   </button>
