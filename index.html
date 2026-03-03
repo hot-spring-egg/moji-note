@@ -194,7 +194,7 @@
       
       // ★マスが大きくなるため、ペンのデフォルトサイズを少し太めに変更 (35 -> 45)
       const [penSize, setPenSize] = useState(25);
-      const [difficulty, setDifficulty] = useState(0.65);
+      const [difficulty, setDifficulty] = useState(0.60);
       const [useDakuon, setUseDakuon] = useState(false);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
       
@@ -490,7 +490,7 @@
           const userStrokeCount = paths.length;
           const isStrokeCorrect = userStrokeCount === targetStrokeCount;
 
-          let finalDifficulty = difficulty|| 0.65;
+          let finalDifficulty = difficulty|| 0.60;
           if (targetStrokeCount <= 2) {
             finalDifficulty -= 0.15; 
           } else if (targetStrokeCount <= 4) {
@@ -638,9 +638,9 @@
                   <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">はんていの きびしさ</p>
                   <div className="flex justify-center gap-2 sm:gap-4">
                     {[
-                      { rate: 0.60, label: 'かんたん' },
-                      { rate: 0.65, label: 'ふつう' },
-                      { rate: 0.70, label: 'むずかしい' }
+                      { rate: 0.55, label: 'かんたん' },
+                      { rate: 0.60, label: 'ふつう' },
+                      { rate: 0.65, label: 'むずかしい' }
                     ].map(d => (
                       <button
                         key={d.rate}
