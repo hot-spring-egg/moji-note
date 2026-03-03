@@ -10,13 +10,7 @@
     tailwind.config = {
       theme: {
         extend: {
-          colors: {
-            terracotta: '#E07A5F',
-            sage: '#81B29A',
-            bluegrey: '#3D405B',
-            cream: '#F4F1DE',
-            mustard: '#F2CC8F',
-          },
+          colors: { terracotta: '#E07A5F', sage: '#81B29A', bluegrey: '#3D405B', cream: '#F4F1DE', mustard: '#F2CC8F' },
           fontFamily: {
             rounded: ['"M PLUS Rounded 1c"', 'sans-serif'],
             kyokasho: ['"UD Digi Kyokasho N-B"', '"UD デジタル 教科書体 N-B"', '"Klee One"', 'serif'],
@@ -35,96 +29,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
   
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      touch-action: manipulation;
-      user-select: none;
-      height: 100dvh; 
-      width: 100vw;
-    }
-    
-    #root {
-      height: 100%;
-      width: 100%;
-    }
-
-    /* コルクボード風背景 */
-    .bg-cork {
-      background-color: #d0a57b;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
-    }
-
-    /* 紙の質感背景 */
-    .bg-paper {
-      background-color: #F4F1DE;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-    }
-
-    /* マスキングテープ装飾 */
-    .masking-tape {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%) rotate(-2deg);
-      width: 80px;
-      height: 28px;
-      background-color: rgba(129, 178, 154, 0.6);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-      z-index: 10;
-      border-left: 2px dotted rgba(255,255,255,0.6);
-      border-right: 2px dotted rgba(255,255,255,0.6);
-    }
-    
+    body { margin: 0; overflow: hidden; touch-action: manipulation; user-select: none; height: 100dvh; width: 100vw; }
+    #root { height: 100%; width: 100%; }
+    .bg-cork { background-color: #d0a57b; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E"); }
+    .bg-paper { background-color: #F4F1DE; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E"); }
+    .masking-tape { position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(-2deg); width: 80px; height: 28px; background-color: rgba(129, 178, 154, 0.6); box-shadow: 0 1px 2px rgba(0,0,0,0.1); z-index: 10; border-left: 2px dotted rgba(255,255,255,0.6); border-right: 2px dotted rgba(255,255,255,0.6); }
     .masking-tape-terracotta { background-color: rgba(224, 122, 95, 0.6); transform: translateX(-50%) rotate(3deg); }
     .masking-tape-mustard { background-color: rgba(242, 204, 143, 0.6); transform: translateX(-50%) rotate(-1deg); }
-
-    /* 画鋲（ピン）装飾 */
-    .pin {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #fca5a5, #E07A5F);
-      box-shadow: 2px 3px 4px rgba(0,0,0,0.3), inset -1px -1px 3px rgba(0,0,0,0.2);
-      z-index: 10;
-    }
-    .pin::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background-color: rgba(255,255,255,0.6);
-    }
+    .pin { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fca5a5, #E07A5F); box-shadow: 2px 3px 4px rgba(0,0,0,0.3), inset -1px -1px 3px rgba(0,0,0,0.2); z-index: 10; }
+    .pin::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; border-radius: 50%; background-color: rgba(255,255,255,0.6); }
     .pin-blue { background: radial-gradient(circle at 30% 30%, #93c5fd, #3D405B); }
     .pin-yellow { background: radial-gradient(circle at 30% 30%, #fde047, #F2CC8F); }
-    .pin-green { background: radial-gradient(circle at 30% 30%, #86efac, #81B29A); }
-
-    @keyframes openNote {
-      0% { transform: translateY(20px); opacity: 0; }
-      100% { transform: translateY(0); opacity: 1; }
-    }
+    @keyframes openNote { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
     .animate-open-note { animation: openNote 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-
-    @keyframes popIn {
-      0% { transform: scale(0.95); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
+    @keyframes popIn { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     .animate-pop-in { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-    
     canvas { touch-action: none; }
   </style>
 </head>
 <body>
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
@@ -190,8 +114,6 @@
       const [score, setScore] = useState(0);
       const [feedback, setFeedback] = useState(null);
       const [errorMessage, setErrorMessage] = useState('');
-      
-      // ★ミスしたかを記録するステート（スコア加算の判定に使用）
       const [hasMistaked, setHasMistaked] = useState(false);
       
       const [penSize, setPenSize] = useState(25);
@@ -212,6 +134,11 @@
       const targetChars = questions.length > 0 
         ? (playMode === 'char' ? [questions[currentIndex]] : questions[currentIndex].split(''))
         : [];
+
+      const addScoreToLocal = () => {
+        const currentScore = parseInt(localStorage.getItem('gogo_drill_score') || '0', 10);
+        localStorage.setItem('gogo_drill_score', currentScore + 1);
+      };
 
       const startGame = (mode) => {
         setPlayMode(mode);
@@ -235,7 +162,7 @@
         setCurrentIndex(0);
         setCurrentStep('trace');
         setScore(0);
-        setHasMistaked(false); // リセット
+        setHasMistaked(false);
         setGameState('PRACTICE');
         setFeedback(null);
         setErrorMessage('');
@@ -247,13 +174,12 @@
         
         if (currentStep === 'trace') {
           setCurrentStep('blind');
-          setHasMistaked(false); // ステップが変わるのでミス状態をリセット
+          setHasMistaked(false);
         } else if (currentStep === 'retry_trace') {
           setCurrentStep('blind');
-          // リトライからお手本なしに戻る時は、ミス状態を維持する（スコアを入れないため）
         } else {
           setCurrentStep('trace');
-          setHasMistaked(false); // 次の問題へ進むのでリセット
+          setHasMistaked(false);
           if (currentIndex + 1 < questions.length) {
             setCurrentIndex(i => i + 1);
           } else {
@@ -262,13 +188,11 @@
         }
       };
 
-      // ★とばす（スキップ）処理：スコアを加算せずに強制的に次の問題へ進む
       const skipQuestion = () => {
         setFeedback(null);
         setErrorMessage('');
         pathsRef.current = [];
         currentPathRef.current = [];
-        
         setCurrentStep('trace');
         setHasMistaked(false);
         if (currentIndex + 1 < questions.length) {
@@ -301,7 +225,6 @@
           if (bgCanvas) {
             const bgCtx = bgCanvas.getContext('2d', { willReadFrequently: true });
             bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-            
             bgCtx.fillStyle = '#ffffff';
             bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
@@ -505,7 +428,7 @@
           const userStrokeCount = paths.length;
           const isStrokeCorrect = userStrokeCount === targetStrokeCount;
 
-          let finalDifficulty = difficulty|| 0.60;
+          let finalDifficulty = difficulty || 0.60;
           if (targetStrokeCount <= 2) {
             finalDifficulty -= 0.15; 
           } else if (targetStrokeCount <= 4) {
@@ -540,9 +463,9 @@
 
         if (allCorrect) {
           setFeedback('⭕️');
-          // ★修正: 一度でも間違えていた場合（hasMistaked が true）やリトライ中はスコアを加算しない
           if (currentStep !== 'retry_trace' && !hasMistaked) {
             setScore(s => s + 1);
+            addScoreToLocal(); 
           }
           setTimeout(() => {
             goToNext();
@@ -550,7 +473,7 @@
         } else {
           setFeedback('❌');
           setErrorMessage(firstErrorMsg);
-          setHasMistaked(true); // ★追加: 一度でも間違えたらフラグを立てる
+          setHasMistaked(true);
           
           if (currentStep === 'blind') {
             targetChars.forEach((char, idx) => {
@@ -569,7 +492,6 @@
           setTimeout(() => {
             setFeedback(null);
             setErrorMessage('');
-            
             if (currentStep === 'blind') {
               setCurrentStep('retry_trace');
             } else {
@@ -581,165 +503,50 @@
 
       const maxScore = questions.length * 2; 
 
-      if (!isFontLoaded) {
-        return (
-          <div className="w-full h-full flex items-center justify-center bg-paper">
-            <p className="font-rounded text-2xl text-bluegrey font-bold">じゅんびちゅう...</p>
-          </div>
-        );
-      }
-
       return (
         <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-cork">
           
           {(gameState === 'TITLE' || gameState === 'MODE_SELECT') && (
-            <button 
-              onClick={() => setIsSettingsOpen(true)}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-white/80 text-bluegrey w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl shadow-sm hover:shadow-md transition-all z-40 border border-gray-200"
-            >
-              ⚙️
-            </button>
+            <>
+              <button onClick={() => window.location.href = 'index.html'} className="absolute top-4 left-4 sm:top-6 sm:left-6 bg-white/90 text-bluegrey px-4 py-2 rounded-full font-bold shadow-sm hover:shadow-md transition-all z-40 border border-gray-200 text-sm sm:text-base">
+                ← ドリルにもどる
+              </button>
+              <button onClick={() => setIsSettingsOpen(true)} className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-white/80 text-bluegrey w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl shadow-sm hover:shadow-md transition-all z-40 border border-gray-200">
+                ⚙️
+              </button>
+            </>
           )}
 
           {isSettingsOpen && (
             <div className="absolute inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
               <div className="bg-paper p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md relative animate-pop-in border border-white max-h-[90vh] overflow-y-auto">
                 <h2 className="font-rounded text-2xl sm:text-3xl font-bold mb-6 text-center text-bluegrey border-b-2 border-sage pb-2">せってい</h2>
-                
-                <div className="mb-8">
-                  <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">もんだいの しゅるい</p>
-                  <button
-                    onClick={() => setUseDakuon(!useDakuon)}
-                    className={`w-full py-4 px-4 rounded-xl border-2 font-rounded font-bold text-lg transition-all flex flex-col items-center justify-center gap-1 ${
-                      useDakuon 
-                        ? 'bg-sage border-sage text-white shadow-inner' 
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span>だくおん・はんだくおん</span>
-                    <span className="text-sm font-normal opacity-90">
-                      (が・ぱ など 点々や丸がつく文字)
-                    </span>
-                    <span className="mt-1 text-base">{useDakuon ? 'ON (でる)' : 'OFF (でない)'}</span>
-                  </button>
-                </div>
-
-                <div className="mb-8">
-                  <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">ペンの ふとさ</p>
-                  <div className="flex justify-center gap-4 sm:gap-6">
-                    {[
-                      { size: 15, label: 'ほそい' },
-                      { size: 25, label: 'ふつう' },
-                      { size: 35, label: 'ふとい' }
-                    ].map(p => (
-                      <button
-                        key={p.size}
-                        onClick={() => setPenSize(p.size)}
-                        className={`w-20 h-20 rounded-full flex flex-col items-center justify-center border-2 transition-all ${
-                          penSize === p.size 
-                            ? 'bg-sage border-sage text-white shadow-inner scale-110' 
-                            : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="bg-current rounded-full mb-1" style={{ width: p.size/3, height: p.size/3 }}></div>
-                        <span className="font-rounded text-xs">{p.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-8">
-                  <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">はんていの きびしさ</p>
-                  <div className="flex justify-center gap-2 sm:gap-4">
-                    {[
-                      { rate: 0.55, label: 'かんたん' },
-                      { rate: 0.60, label: 'ふつう' },
-                      { rate: 0.65, label: 'むずかしい' }
-                    ].map(d => (
-                      <button
-                        key={d.rate}
-                        onClick={() => setDifficulty(d.rate)}
-                        className={`px-3 py-3 sm:px-4 sm:py-4 font-rounded text-sm sm:text-base rounded-xl transition-all ${
-                          difficulty === d.rate
-                            ? 'bg-sage text-white shadow-inner'
-                            : 'bg-white border border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="w-full bg-terracotta text-white font-rounded py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl transition-all"
-                >
-                  とじる
-                </button>
+                <div className="mb-8"><p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">もんだいの しゅるい</p><button onClick={() => setUseDakuon(!useDakuon)} className={`w-full py-4 px-4 rounded-xl border-2 font-rounded font-bold text-lg transition-all flex flex-col items-center justify-center gap-1 ${useDakuon ? 'bg-sage border-sage text-white shadow-inner' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}><span>だくおん・はんだくおん</span><span className="text-sm font-normal opacity-90">(が・ぱ など 点々や丸がつく文字)</span><span className="mt-1 text-base">{useDakuon ? 'ON (でる)' : 'OFF (でない)'}</span></button></div>
+                <div className="mb-8"><p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">ペンの ふとさ</p><div className="flex justify-center gap-4 sm:gap-6">{[{ size: 15, label: 'ほそい' }, { size: 25, label: 'ふつう' }, { size: 35, label: 'ふとい' }].map(p => (<button key={p.size} onClick={() => setPenSize(p.size)} className={`w-20 h-20 rounded-full flex flex-col items-center justify-center border-2 transition-all ${penSize === p.size ? 'bg-sage border-sage text-white shadow-inner scale-110' : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-50'}`}><div className="bg-current rounded-full mb-1" style={{ width: p.size/3, height: p.size/3 }}></div><span className="font-rounded text-xs">{p.label}</span></button>))}</div></div>
+                <div className="mb-8"><p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">はんていの きびしさ</p><div className="flex justify-center gap-2 sm:gap-4">{[{ rate: 0.55, label: 'かんたん' }, { rate: 0.60, label: 'ふつう' }, { rate: 0.65, label: 'むずかしい' }].map(d => (<button key={d.rate} onClick={() => setDifficulty(d.rate)} className={`px-3 py-3 sm:px-4 sm:py-4 font-rounded text-sm sm:text-base rounded-xl transition-all ${difficulty === d.rate ? 'bg-sage text-white shadow-inner' : 'bg-white border border-gray-300 text-gray-500 hover:bg-gray-50'}`}>{d.label}</button>))}</div></div>
+                <button onClick={() => setIsSettingsOpen(false)} className="w-full bg-terracotta text-white font-rounded py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl transition-all">とじる</button>
               </div>
             </div>
           )}
 
           {gameState === 'TITLE' && (
             <div className="w-full h-full flex flex-col items-center justify-center p-4">
-              <div className="bg-paper px-8 py-4 sm:py-6 rounded-sm shadow-md mb-8 transform -rotate-1 relative">
-                <div className="masking-tape"></div>
-                <h1 className="font-rounded text-4xl sm:text-5xl font-bold text-bluegrey tracking-wider">モジノート</h1>
-              </div>
+              <div className="bg-paper px-8 py-4 sm:py-6 rounded-sm shadow-md mb-8 transform -rotate-1 relative mt-12"><div className="masking-tape"></div><h1 className="font-rounded text-4xl sm:text-5xl font-bold text-bluegrey tracking-wider">モジノート</h1></div>
               <p className="font-rounded text-white bg-bluegrey/80 px-4 py-1 rounded-full mb-8 text-sm sm:text-base">どちら を れんしゅう する？</p>
-              
               <div className="w-full max-w-sm flex flex-col gap-6">
-                <button 
-                  onClick={() => { setCharType('hiragana'); setGameState('MODE_SELECT'); }}
-                  className="w-full bg-paper aspect-[3/1] rounded-sm flex flex-col items-center justify-center relative shadow-md hover:-translate-y-1 hover:shadow-lg transition-all border border-gray-200"
-                >
-                  <div className="pin pin-blue"></div>
-                  <span className="font-rounded text-3xl sm:text-4xl font-bold text-sage">ひらがな</span>
-                </button>
-                
-                <button 
-                  onClick={() => { setCharType('katakana'); setGameState('MODE_SELECT'); }}
-                  className="w-full bg-paper aspect-[3/1] rounded-sm flex flex-col items-center justify-center relative shadow-md hover:-translate-y-1 hover:shadow-lg transition-all border border-gray-200 rotate-[1deg]"
-                >
-                  <div className="pin pin-yellow"></div>
-                  <span className="font-rounded text-3xl sm:text-4xl font-bold text-terracotta">カタカナ</span>
-                </button>
+                <button onClick={() => { setCharType('hiragana'); setGameState('MODE_SELECT'); }} className="w-full bg-paper aspect-[3/1] rounded-sm flex flex-col items-center justify-center relative shadow-md hover:-translate-y-1 hover:shadow-lg transition-all border border-gray-200"><div className="pin pin-blue"></div><span className="font-rounded text-3xl sm:text-4xl font-bold text-sage">ひらがな</span></button>
+                <button onClick={() => { setCharType('katakana'); setGameState('MODE_SELECT'); }} className="w-full bg-paper aspect-[3/1] rounded-sm flex flex-col items-center justify-center relative shadow-md hover:-translate-y-1 hover:shadow-lg transition-all border border-gray-200 rotate-[1deg]"><div className="pin pin-yellow"></div><span className="font-rounded text-3xl sm:text-4xl font-bold text-terracotta">カタカナ</span></button>
               </div>
             </div>
           )}
 
           {gameState === 'MODE_SELECT' && (
             <div className="w-full h-full flex flex-col items-center justify-center p-4">
-              <div className="bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 flex flex-col items-center mb-8 relative">
-                <h2 className={`font-rounded text-2xl sm:text-3xl font-bold border-b-2 pb-1 ${charType === 'hiragana' ? 'text-sage border-sage' : 'text-terracotta border-terracotta'}`}>
-                  {charType === 'hiragana' ? 'ひらがな' : 'カタカナ'} の ノート
-                </h2>
-              </div>
-              
+              <div className="bg-white px-6 py-3 rounded-full shadow-sm border border-gray-100 flex flex-col items-center mb-8 relative mt-12"><h2 className={`font-rounded text-2xl sm:text-3xl font-bold border-b-2 pb-1 ${charType === 'hiragana' ? 'text-sage border-sage' : 'text-terracotta border-terracotta'}`}>{charType === 'hiragana' ? 'ひらがな' : 'カタカナ'} の ノート</h2></div>
               <div className="w-full max-w-sm flex flex-col gap-6">
-                <button 
-                  onClick={() => startGame('char')}
-                  className="w-full bg-mustard text-white font-rounded py-5 rounded-xl shadow-md active:translate-y-1 active:shadow-sm flex flex-col items-center gap-1 transition-all border-4 border-white"
-                >
-                  <span className="text-2xl sm:text-3xl font-bold">1もじずつ</span>
-                  <span className="text-sm sm:text-base">(10もん)</span>
-                </button>
-                
-                <button 
-                  onClick={() => startGame('word')}
-                  className="w-full bg-bluegrey text-white font-rounded py-5 rounded-xl shadow-md active:translate-y-1 active:shadow-sm flex flex-col items-center gap-1 transition-all border-4 border-white"
-                >
-                  <span className="text-2xl sm:text-3xl font-bold">ことば で</span>
-                  <span className="text-sm sm:text-base">(5もん)</span>
-                </button>
-                
-                <button 
-                  onClick={() => setGameState('TITLE')} 
-                  className="mt-4 font-rounded text-bluegrey/70 underline hover:text-bluegrey text-lg"
-                >
-                  ← もどる
-                </button>
+                <button onClick={() => startGame('char')} className="w-full bg-mustard text-white font-rounded py-5 rounded-xl shadow-md active:translate-y-1 active:shadow-sm flex flex-col items-center gap-1 transition-all border-4 border-white"><span className="text-2xl sm:text-3xl font-bold">1もじずつ</span><span className="text-sm sm:text-base">(10もん)</span></button>
+                <button onClick={() => startGame('word')} className="w-full bg-bluegrey text-white font-rounded py-5 rounded-xl shadow-md active:translate-y-1 active:shadow-sm flex flex-col items-center gap-1 transition-all border-4 border-white"><span className="text-2xl sm:text-3xl font-bold">ことば で</span><span className="text-sm sm:text-base">(5もん)</span></button>
+                <button onClick={() => setGameState('TITLE')} className="mt-4 font-rounded text-bluegrey/70 underline hover:text-bluegrey text-lg">← もどる</button>
               </div>
             </div>
           )}
@@ -747,110 +554,38 @@
           {gameState === 'PRACTICE' && questions.length > 0 && (
             <div className="w-full h-full flex flex-col p-2 sm:p-4 relative">
               <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col items-center bg-paper rounded-sm shadow-xl text-gray-900 p-2 sm:p-4 overflow-hidden relative animate-open-note border border-white">
-                
-                {/* ヘッダー情報 */}
                 <div className="w-full flex justify-between items-center font-rounded text-base sm:text-xl text-bluegrey/70 mb-1 px-2 shrink-0">
-                  <button 
-                    onClick={() => setGameState('MODE_SELECT')} 
-                    className="underline hover:text-bluegrey"
-                    disabled={feedback !== null}
-                  >
-                    ←やめる
-                  </button>
-                  <div className="flex gap-4 font-bold">
-                    <span>{currentIndex + 1} / {questions.length}</span>
-                    <span>スコア: {score}</span>
-                  </div>
+                  <button onClick={() => setGameState('MODE_SELECT')} className="underline hover:text-bluegrey" disabled={feedback !== null}>←やめる</button>
+                  <div className="flex gap-4 font-bold"><span>{currentIndex + 1} / {questions.length}</span><span>スコア: {score}</span></div>
                 </div>
-
-                {/* 現在のステップの指示 */}
-                <div className={`font-rounded font-bold text-lg sm:text-2xl mb-1 px-6 py-1 rounded-full shrink-0 ${
-                  currentStep === 'trace' ? 'bg-sage/20 text-sage' : 
-                  currentStep === 'blind' ? 'bg-bluegrey/10 text-bluegrey' :
-                  'bg-terracotta/20 text-terracotta'
-                }`}>
+                <div className={`font-rounded font-bold text-lg sm:text-2xl mb-1 px-6 py-1 rounded-full shrink-0 ${currentStep === 'trace' ? 'bg-sage/20 text-sage' : currentStep === 'blind' ? 'bg-bluegrey/10 text-bluegrey' : 'bg-terracotta/20 text-terracotta'}`}>
                   {currentStep === 'trace' && '① なぞって かこう！'}
                   {currentStep === 'blind' && '② おてほん なしで かこう！'}
                   {currentStep === 'retry_trace' && '★ あか文字 を なぞって かくにん！'}
                 </div>
-
-                {/* 判定結果を画面全体にオーバーレイ表示 */}
                 {feedback && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-50 bg-white/40 backdrop-blur-sm">
-                    <span className={`text-[9rem] sm:text-[12rem] drop-shadow-lg opacity-95 leading-none ${feedback === '⭕️' ? 'text-sage' : 'text-terracotta'}`}>
-                      {feedback}
-                    </span>
-                    {errorMessage && (
-                      <div className="mt-4 bg-white px-6 py-3 rounded-2xl border-4 border-terracotta text-terracotta font-rounded font-bold text-xl sm:text-2xl text-center whitespace-pre-wrap shadow-xl">
-                        {errorMessage}
-                      </div>
-                    )}
+                    <span className={`text-[9rem] sm:text-[12rem] drop-shadow-lg opacity-95 leading-none ${feedback === '⭕️' ? 'text-sage' : 'text-terracotta'}`}>{feedback}</span>
+                    {errorMessage && <div className="mt-4 bg-white px-6 py-3 rounded-2xl border-4 border-terracotta text-terracotta font-rounded font-bold text-xl sm:text-2xl text-center whitespace-pre-wrap shadow-xl">{errorMessage}</div>}
                   </div>
                 )}
-
-                {/* キャンバス領域 */}
                 <div className="w-full flex-1 flex justify-center items-center gap-2 sm:gap-4 my-1 min-h-0">
                   {targetChars.map((char, idx) => {
                     let maxWidth = 'min(80vw, 55vh)'; 
-                    if (playMode === 'word') {
-                      maxWidth = targetChars.length === 2 ? 'min(42vw, 55vh)' : 'min(28vw, 55vh)';
-                    }
-                    
+                    if (playMode === 'word') { maxWidth = targetChars.length === 2 ? 'min(42vw, 55vh)' : 'min(28vw, 55vh)'; }
                     return (
-                      <div 
-                        key={idx} 
-                        className="relative rounded-2xl aspect-square shadow-md overflow-hidden bg-white border-2 border-gray-200 shrink-0"
-                        style={{ width: '100%', maxWidth: maxWidth }}
-                      >
-                        <canvas
-                          ref={el => bgCanvasRefs.current[idx] = el}
-                          width={CANVAS_SIZE}
-                          height={CANVAS_SIZE}
-                          className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                        />
-                        <canvas
-                          ref={el => drawCanvasRefs.current[idx] = el}
-                          width={CANVAS_SIZE}
-                          height={CANVAS_SIZE}
-                          onMouseDown={(e) => startDrawing(e, idx)}
-                          onMouseMove={(e) => draw(e, idx)}
-                          onMouseUp={(e) => stopDrawing(e, idx)}
-                          onMouseOut={(e) => stopDrawing(e, idx)}
-                          onTouchStart={(e) => startDrawing(e, idx)}
-                          onTouchMove={(e) => draw(e, idx)}
-                          onTouchEnd={(e) => stopDrawing(e, idx)}
-                          className="cursor-crosshair absolute top-0 left-0 w-full h-full touch-none"
-                        />
+                      <div key={idx} className="relative rounded-2xl aspect-square shadow-md overflow-hidden bg-white border-2 border-gray-200 shrink-0" style={{ width: '100%', maxWidth: maxWidth }}>
+                        <canvas ref={el => bgCanvasRefs.current[idx] = el} width={CANVAS_SIZE} height={CANVAS_SIZE} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+                        <canvas ref={el => drawCanvasRefs.current[idx] = el} width={CANVAS_SIZE} height={CANVAS_SIZE} onMouseDown={(e) => startDrawing(e, idx)} onMouseMove={(e) => draw(e, idx)} onMouseUp={(e) => stopDrawing(e, idx)} onMouseOut={(e) => stopDrawing(e, idx)} onTouchStart={(e) => startDrawing(e, idx)} onTouchMove={(e) => draw(e, idx)} onTouchEnd={(e) => stopDrawing(e, idx)} className="cursor-crosshair absolute top-0 left-0 w-full h-full touch-none" />
                       </div>
                     );
                   })}
                 </div>
-
-                {/* ★追加・修正: コントロールボタン（とばすボタン追加） */}
                 <div className="flex gap-2 sm:gap-4 w-full justify-center shrink-0 pt-2 pb-1 px-2">
-                  <button 
-                    onClick={skipQuestion}
-                    disabled={feedback !== null}
-                    className="bg-bluegrey/80 text-white font-rounded py-3 px-4 sm:px-8 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-base sm:text-xl transition-all"
-                  >
-                    とばす
-                  </button>
-                  <button 
-                    onClick={clearCanvas}
-                    disabled={feedback !== null}
-                    className="bg-gray-300 text-gray-700 font-rounded py-3 px-6 sm:px-10 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-base sm:text-xl transition-all"
-                  >
-                    けす
-                  </button>
-                  <button 
-                    onClick={checkWriting}
-                    disabled={feedback !== null}
-                    className="bg-terracotta text-white font-rounded py-3 px-8 sm:px-14 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-lg sm:text-2xl font-bold transition-all"
-                  >
-                    できた！
-                  </button>
+                  <button onClick={skipQuestion} disabled={feedback !== null} className="bg-bluegrey/80 text-white font-rounded py-3 px-4 sm:px-8 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-base sm:text-xl transition-all">とばす</button>
+                  <button onClick={clearCanvas} disabled={feedback !== null} className="bg-gray-300 text-gray-700 font-rounded py-3 px-6 sm:px-10 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-base sm:text-xl transition-all">けす</button>
+                  <button onClick={checkWriting} disabled={feedback !== null} className="bg-terracotta text-white font-rounded py-3 px-8 sm:px-14 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-lg sm:text-2xl font-bold transition-all">できた！</button>
                 </div>
-
               </div>
             </div>
           )}
@@ -859,19 +594,13 @@
             <div className="w-full h-full flex flex-col p-4 sm:p-8 relative">
               <div className="w-full max-w-lg mx-auto flex-1 flex flex-col items-center justify-center bg-paper rounded-sm shadow-xl text-gray-900 p-6 overflow-hidden relative animate-open-note border border-white">
                 <h2 className="font-rounded text-3xl sm:text-4xl font-bold mb-8 text-bluegrey border-b-2 border-sage pb-2">けっか はっぴょう</h2>
-                
                 <p className="text-[5rem] sm:text-[7rem] font-bold text-terracotta mb-4 leading-none drop-shadow-sm flex items-baseline gap-2">
                   {score} <span className="text-3xl sm:text-4xl text-bluegrey">/ {maxScore} てん</span>
                 </p>
-                
                 <p className="font-rounded text-xl sm:text-2xl mb-12 text-sage font-bold">
                   {score === maxScore ? 'パーフェクト！すごいぞ！' : 'よくがんばったね！'}
                 </p>
-                
-                <button 
-                  onClick={() => setGameState('TITLE')}
-                  className="bg-bluegrey text-white font-rounded px-8 py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl w-full max-w-xs"
-                >
+                <button onClick={() => setGameState('TITLE')} className="bg-bluegrey text-white font-rounded px-8 py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl w-full max-w-xs">
                   ノートをとじる
                 </button>
               </div>
