@@ -120,31 +120,38 @@
 
     // ---------------------------------------------------------------
     // はんてい の レベル (3だんかい)
-    // ※ かいた ばしょ・おおきさ は おてほん に そろえて から くらべる ので、
-    //    マス の なか なら どこ に かいて も 「かたち・バランス」 で はんてい する
+    // ※ かたち は おてほん の おおきさ に そろえて から くらべる が、
+    //    十字マス の なか の 「かく ばしょ」 は べつ に はんてい する
     //   cover  : おてほん の せん の ちかく を どれだけ とおれて いるか
     //   inside : おてほん から はなれた インク が すくないか
     //   cheat  : ぬりつぶし よけ (おてほん の なんばい の インク まで ゆるすか)
+    //   pos    : 十字マス の なか で ばしょ が ずれて いても ゆるす はんい
+    //            (もじ の おおきさ を 1 と した わりあい)
+    //   direction : かく の むき が ぎゃく に なって いないか
+    //            'axis' = よこぼう・たてぼう だけ / 'all' = ななめ の かく も みる
     //   orderTolerance : かきじゅん はんてい の きびしさ (null = はんてい しない)
     // ---------------------------------------------------------------
     const DIFFICULTY_LEVELS = {
       easy: {
         label: 'かんたん',
-        desc: 'かたち だけ\nみるよ',
-        hint: 'かくすう と だいたい の かたち を みます。はじめて の ひと むけ。',
+        desc: 'かたち と\nむき を みるよ',
+        hint: 'かくすう・だいたい の かたち・かく ばしょ と むき を みます。はじめて の ひと むけ。',
         cover: 0.50, inside: 0.40, cheat: 4.0, orderTolerance: null,
+        pos: 0.28, direction: 'axis',
       },
       normal: {
         label: 'ふつう',
         desc: 'かきじゅん も\nみるよ',
-        hint: 'かくすう・かたち に くわえて、かきじゅん も やさしく みます。',
+        hint: 'かたち・かく ばしょ・かく むき に くわえて、かきじゅん も やさしく みます。',
         cover: 0.62, inside: 0.52, cheat: 3.5, orderTolerance: 0.30,
+        pos: 0.23, direction: 'all',
       },
       hard: {
         label: 'むずかしい',
         desc: 'かきじゅん を\nしっかり みるよ',
-        hint: 'かたち も かきじゅん も しっかり みます。じしん が ついたら ちょうせん！',
+        hint: 'かたち も かく ばしょ も かきじゅん も しっかり みます。じしん が ついたら ちょうせん！',
         cover: 0.70, inside: 0.62, cheat: 3.0, orderTolerance: 0.16,
+        pos: 0.19, direction: 'all',
       },
     };
 
@@ -350,6 +357,77 @@
       return { ok: false, wrongIndex };
     };
 
+    // 「もっと ひだりうえ に かこう」 の よう な、ばしょ の なおしかた
+    const positionHint = (offsetX, offsetY) => {
+      const dir = [];
+      if (offsetX > 0.08) dir.push('ひだり');
+      else if (offsetX < -0.08) dir.push('みぎ');
+      if (offsetY > 0.08) dir.push('うえ');
+      else if (offsetY < -0.08) dir.push('した');
+      return dir.length > 0 ? `もっと ${dir.join('')} に かこう` : 'まんなか の せん を めやす に かこう';
+    };
+
+    // 「ひだり から みぎ へ」 の よう な、かく の むき の いいかた
+    const strokeDirectionHint = (dx, dy) => {
+      const h = Math.abs(dx) > 0.12 ? (dx > 0 ? ['ひだり', 'みぎ'] : ['みぎ', 'ひだり']) : null;
+      const v = Math.abs(dy) > 0.12 ? (dy > 0 ? ['うえ', 'した'] : ['した', 'うえ']) : null;
+      if (h && v) return `${h[0]}${v[0]} から ${h[1]}${v[1]} へ`;
+      if (h) return `${h[0]} から ${h[1]} へ`;
+      if (v) return `${v[0]} から ${v[1]} へ`;
+      return 'おてほん の むき に';
+    };
+
+    // かく の むき (ひだり→みぎ、うえ→した など) が ぎゃく に なって いないか
+    //   mode 'axis' : よこぼう・たてぼう だけ みる
+    //   mode 'all'  : ななめ の かく も みる
+    // ※ てん や みじかい かく (だくてん など) は むき が さだまらない ので みない
+    const DIRECTION_MIN_MODEL_LEN = 0.20;
+    const DIRECTION_MIN_USER_LEN = 0.18;
+    const DIRECTION_AXIS_BACK = 0.20;
+    const DIRECTION_COS_LIMIT = -0.30;
+
+    const judgeStrokeDirection = (userPaths, expected, mode) => {
+      if (!mode || userPaths.length !== expected.length) return { ok: true, wrongIndex: -1 };
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      userPaths.forEach(path => path.forEach(pt => {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+      }));
+      const size = Math.max(maxX - minX, maxY - minY, 1);
+
+      for (let i = 0; i < expected.length; i++) {
+        const path = userPaths[i];
+        if (!path || path.length < 2) continue;
+
+        const mdx = expected[i][2] - expected[i][0];
+        const mdy = expected[i][3] - expected[i][1];
+        const modelLen = Math.hypot(mdx, mdy);
+        if (modelLen < DIRECTION_MIN_MODEL_LEN) continue;
+
+        const udx = (path[path.length - 1].x - path[0].x) / size;
+        const udy = (path[path.length - 1].y - path[0].y) / size;
+        const userLen = Math.hypot(udx, udy);
+        if (userLen < DIRECTION_MIN_USER_LEN) continue;
+
+        const horizontal = Math.abs(mdx) > Math.abs(mdy) * 1.5;
+        const vertical = Math.abs(mdy) > Math.abs(mdx) * 1.5;
+        if (mode !== 'all' && !horizontal && !vertical) continue;
+
+        // まるごと ぎゃく むき に かいて いないか
+        const cos = (mdx * udx + mdy * udy) / (modelLen * userLen);
+        let reversed = cos < DIRECTION_COS_LIMIT;
+        // よこぼう は ひだり→みぎ、たてぼう は うえ→した の むき も みる
+        if (!reversed && horizontal && udx * mdx < 0 && Math.abs(udx) > DIRECTION_AXIS_BACK) reversed = true;
+        if (!reversed && vertical && udy * mdy < 0 && Math.abs(udy) > DIRECTION_AXIS_BACK) reversed = true;
+
+        if (reversed) return { ok: false, wrongIndex: i, hint: strokeDirectionHint(mdx, mdy) };
+      }
+      return { ok: true, wrongIndex: -1 };
+    };
+
     // おてほん の もじ が じっさい に えがかれる はんい を しらべる
     const glyphBoxCache = {};
     const getGlyphBox = (char) => {
@@ -445,7 +523,7 @@
     };
 
     // かいた もじ を おてほん の おおきさ・いち に そろえる
-    // (マス の どこ に かいて いても、かたち その もの で はんてい する ため)
+    // (かたち その もの を くらべる ため。ずれ の おおきさ は offset に のこす)
     const alignPathsToGlyph = (paths, char) => {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       paths.forEach(path => path.forEach(pt => {
@@ -466,15 +544,24 @@
         x: gcx + (pt.x - ucx) * scale,
         y: gcy + (pt.y - ucy) * scale,
       })));
-      return { aligned, sizeRatio };
+      // 十字マス の なか で 「かく ばしょ」 が どれだけ ずれて いるか
+      // (もじ の おおきさ を 1 と した わりあい。ちいさい もじ でも きびしく なりすぎない
+      //  よう に、ものさし に は さいてい でも マス の はんぶん を つかう)
+      const offsetUnit = Math.max(box.w, box.h, CANVAS_SIZE * 0.55);
+      const offsetX = (ucx - gcx) / offsetUnit;
+      const offsetY = (ucy - gcy) / offsetUnit;
+      return { aligned, sizeRatio, offsetX, offsetY, offsetRatio: Math.hypot(offsetX, offsetY) };
     };
 
     // ---------------------------------------------------------------
     // 1もじ ぶん の さいてん
     //   1. かくすう
     //   2. おおきさ (ちいさすぎ ない か)
-    //   3. かたち (おてほん の せん の ちかく を とおって いるか / はみだし)
-    //   4. かきじゅん (レベル に よる)
+    //   3. かく ばしょ (十字マス の なか で おおきく ずれて いない か)
+    //   4. かたち (おてほん の せん の ちかく を とおって いるか / はみだし)
+    //   5. かく むき (ひだり→みぎ、うえ→した を ぎゃく に かいて いない か)
+    //   6. かきじゅん (レベル に よる)
+    // ※ 3 と 5 は 「じけい が よくて も ✕」 に する ため、かたち と は べつ に みる
     // ---------------------------------------------------------------
     const judgeCharacter = (paths, char, charType, penSize, level) => {
       const targetStrokeCount = charType === 'hiragana' ? HIRAGANA_STROKES[char] : KATAKANA_STROKES[char];
@@ -487,8 +574,13 @@
         return { ok: false, reason: 'strokeCount', targetStrokeCount };
       }
 
-      const { aligned, sizeRatio } = alignPathsToGlyph(paths, char);
+      const { aligned, sizeRatio, offsetX, offsetY, offsetRatio } = alignPathsToGlyph(paths, char);
       if (sizeRatio < 0.45) return { ok: false, reason: 'small' };
+
+      // 十字マス の なか で ばしょ が おおきく ずれて いたら、じけい が よくて も ✕
+      if (offsetRatio > level.pos) {
+        return { ok: false, reason: 'position', offsetX, offsetY, offsetRatio };
+      }
 
       const { core: targetData, fat: targetDataFat } = getTargetData(char, penSize);
       const userData = renderUserPaths(aligned, penSize);
@@ -531,6 +623,12 @@
       if (strokeOrderData) {
         const orderResult = judgeStrokeOrder(paths, strokeOrderData, level.orderTolerance);
         if (!orderResult.ok) return { ok: false, reason: 'order', wrongIndex: orderResult.wrongIndex, coverRate, insideRate };
+
+        // かく を ぎゃく から かいて いたら、じけい が よくて も ✕
+        const dirResult = judgeStrokeDirection(paths, strokeOrderData, level.direction);
+        if (!dirResult.ok) {
+          return { ok: false, reason: 'direction', wrongIndex: dirResult.wrongIndex, hint: dirResult.hint, coverRate, insideRate };
+        }
       }
 
       return { ok: true, coverRate, insideRate };
@@ -593,7 +691,8 @@
 
     // かいはつ・テスト よう の フック (アプリ の うごき には えいきょう しない)
     window.__mojiNoteTest = {
-      judgeCharacter, judgeStrokeOrder, alignPathsToGlyph, getGlyphBox, makeStrokeMapper,
+      judgeCharacter, judgeStrokeOrder, judgeStrokeDirection, alignPathsToGlyph, getGlyphBox,
+      makeStrokeMapper, positionHint, strokeDirectionHint,
       getStrokeOrder, DIFFICULTY_LEVELS, HIRAGANA_STROKES, KATAKANA_STROKES, STROKE_ORDER,
     };
 
@@ -847,6 +946,10 @@
               firstErrorMsg = `${displayIdx}かくすう が ちがうよ！\n(せいかいは ${result.targetStrokeCount} かく)`;
             } else if (result.reason === 'order') {
               firstErrorMsg = `${displayIdx}かきじゅん が ちがうよ！\n(${result.wrongIndex + 1} かくめ を みてね)`;
+            } else if (result.reason === 'direction') {
+              firstErrorMsg = `${displayIdx}かく むき が ぎゃく だよ！\n(${result.wrongIndex + 1} かくめ は ${result.hint})`;
+            } else if (result.reason === 'position') {
+              firstErrorMsg = `${displayIdx}かく ばしょ が ずれて いるよ！\n(${positionHint(result.offsetX, result.offsetY)})`;
             } else if (result.reason === 'small') {
               firstErrorMsg = `${displayIdx}もっと おおきく かいてみよう！`;
             } else if (result.reason === 'protrude') {
