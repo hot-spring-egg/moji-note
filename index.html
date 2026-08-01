@@ -95,44 +95,56 @@
       'めがね', 'かぎ', 'かぐ', 'ひげ', 'りんご', 'かぜ', 'くじら', 'みず', 'かぞく', 'かたな', 'かばん', 'きっぷ', 'くるま', 'さとう', 'こくご', 'すいか', 'たいこ', 'つみき', 'とうふ', 'はなび', 'ひよこ', 'ほのお', 'まくら', 'めいし', 'もくば', 'ゆのみ', 'りんご', 'れんが', 
       'めだか', 'はなぢ', 'つづく', 'でんわ', 'まど', 'かばん', 'へび', 'ぶた', 'なべ', 'ぼうし',
       'さんぽ', 'きっぷ'
-    ].filter(w => w.length <= 3);
+    ].filter((w, i, arr) => w.length <= 3 && arr.indexOf(w) === i);
 
     const KATAKANA_WORDS = [
       'アイス', 'スイカ', 'テント', 'ナイフ', 'マスク', 'ミカン', 'メロン', 'トイレ', 'マイク', 'クラス', 'テニス', 'タオル', 'クイズ', 'ミルク', 'カメラ', 'カラス', 'クルミ', 'トマト', 'ハワイ', 'ホテル', 'バッグ', 'アニメ', 'ココア', 'チョコ', 'サラダ', 'ウサギ', 'カレー', 'クイズ', 'コアラ', 'サンタ', 'ソーダ', 'チキン', 'ツナ', 'テニス', 'トイレ', 'ホタテ', 'マイク', 'ヨット', 'ランプ', 'リボン', 'ルビー', 'レモン', 'ワイン',
       'ガラス', 'ギター', 'グラス', 'ゲーム', 'ゴリラ', 'ラジオ', 'ズボン', 'ゼリー', 'ゾウ',
       'ドア', 'ビル', 'ボタン', 'ピアノ', 'パンダ', 'プール', 'コップ', 'ベッド'
-    ].filter(w => w.length <= 3);
+    ].filter((w, i, arr) => w.length <= 3 && arr.indexOf(w) === i);
 
     const DAKUON_REGEX = /[が-ぼぱ-ぽガ-ボパ-ポ]/;
+
+    // かたより の ない シャッフル (Fisher-Yates)
+    const shuffleArray = (arr) => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
 
     const CANVAS_SIZE = 400;
     const KANA_FONT = '340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif';
 
     // ---------------------------------------------------------------
     // はんてい の レベル (3だんかい)
-    //   cover  : おてほん を どれだけ なぞれて いるか
-    //   inside : はみだして いないか
-    //   cheat  : ぬりつぶし よけ (おてほん の なんばい まで ゆるすか)
+    // ※ かいた ばしょ・おおきさ は おてほん に そろえて から くらべる ので、
+    //    マス の なか なら どこ に かいて も 「かたち・バランス」 で はんてい する
+    //   cover  : おてほん の せん の ちかく を どれだけ とおれて いるか
+    //   inside : おてほん から はなれた インク が すくないか
+    //   cheat  : ぬりつぶし よけ (おてほん の なんばい の インク まで ゆるすか)
     //   orderTolerance : かきじゅん はんてい の きびしさ (null = はんてい しない)
     // ---------------------------------------------------------------
     const DIFFICULTY_LEVELS = {
       easy: {
         label: 'かんたん',
         desc: 'かたち だけ\nみるよ',
-        hint: 'かくすう と かたち だけ を みます。はじめて の ひと むけ。',
-        cover: 0.42, minCover: 0.25, inside: 0.55, cheat: 4.5, orderTolerance: null,
+        hint: 'かくすう と だいたい の かたち を みます。はじめて の ひと むけ。',
+        cover: 0.50, inside: 0.40, cheat: 4.0, orderTolerance: null,
       },
       normal: {
         label: 'ふつう',
         desc: 'かきじゅん も\nみるよ',
         hint: 'かくすう・かたち に くわえて、かきじゅん も やさしく みます。',
-        cover: 0.52, minCover: 0.30, inside: 0.65, cheat: 3.8, orderTolerance: 0.30,
+        cover: 0.62, inside: 0.52, cheat: 3.5, orderTolerance: 0.30,
       },
       hard: {
         label: 'むずかしい',
         desc: 'かきじゅん を\nしっかり みるよ',
-        hint: 'かきじゅん を きちんと みます。まえ の 「ふつう」 くらい の かたち の きびしさ です。',
-        cover: 0.60, minCover: 0.35, inside: 0.70, cheat: 3.2, orderTolerance: 0.16,
+        hint: 'かたち も かきじゅん も しっかり みます。じしん が ついたら ちょうせん！',
+        cover: 0.70, inside: 0.62, cheat: 3.0, orderTolerance: 0.16,
       },
     };
 
@@ -142,12 +154,12 @@
     // ばしょ は 「じゅんばん を みわける」 ため の めやす
     // ---------------------------------------------------------------
     const HIRAGANA_STROKE_ORDER = {
-      'あ': [[0.12,0.30,0.85,0.30],[0.55,0.08,0.42,0.92],[0.78,0.42,0.85,0.82]],
+      'あ': [[0.12,0.30,0.85,0.30],[0.55,0.08,0.42,0.92],[0.60,0.32,0.82,0.75]],
       'い': [[0.28,0.18,0.48,0.78],[0.80,0.25,0.84,0.60]],
       'う': [[0.35,0.12,0.65,0.12],[0.25,0.35,0.35,0.90]],
       'え': [[0.42,0.10,0.60,0.10],[0.25,0.35,0.85,0.85]],
-      'お': [[0.10,0.28,0.72,0.28],[0.48,0.08,0.55,0.80],[0.85,0.40,0.90,0.58]],
-      'か': [[0.12,0.28,0.22,0.85],[0.60,0.12,0.68,0.88],[0.88,0.28,0.82,0.50]],
+      'お': [[0.10,0.28,0.72,0.28],[0.48,0.08,0.55,0.80],[0.78,0.12,0.88,0.26]],
+      'か': [[0.10,0.30,0.42,0.85],[0.30,0.10,0.08,0.78],[0.88,0.28,0.82,0.50]],
       'き': [[0.20,0.22,0.72,0.18],[0.15,0.42,0.70,0.38],[0.62,0.05,0.35,0.62],[0.62,0.62,0.42,0.92]],
       'く': [[0.68,0.12,0.70,0.88]],
       'け': [[0.22,0.15,0.18,0.85],[0.45,0.30,0.90,0.30],[0.72,0.12,0.78,0.85]],
@@ -155,7 +167,7 @@
       'さ': [[0.22,0.25,0.78,0.22],[0.62,0.08,0.35,0.62],[0.65,0.60,0.42,0.92]],
       'し': [[0.30,0.10,0.85,0.72]],
       'す': [[0.15,0.28,0.85,0.28],[0.60,0.10,0.55,0.92]],
-      'せ': [[0.12,0.35,0.80,0.30],[0.35,0.10,0.60,0.88],[0.72,0.15,0.78,0.62]],
+      'せ': [[0.12,0.35,0.80,0.30],[0.72,0.15,0.78,0.62],[0.35,0.10,0.60,0.88]],
       'そ': [[0.20,0.18,0.25,0.88]],
       'た': [[0.08,0.30,0.52,0.28],[0.38,0.08,0.25,0.80],[0.60,0.48,0.92,0.48],[0.62,0.80,0.92,0.82]],
       'ち': [[0.20,0.22,0.80,0.20],[0.58,0.05,0.35,0.88]],
@@ -169,12 +181,12 @@
       'の': [[0.75,0.22,0.62,0.85]],
       'は': [[0.20,0.12,0.18,0.88],[0.42,0.35,0.88,0.32],[0.68,0.12,0.72,0.85]],
       'ひ': [[0.15,0.30,0.85,0.60]],
-      'ふ': [[0.48,0.12,0.42,0.30],[0.30,0.38,0.45,0.85],[0.72,0.42,0.78,0.55],[0.75,0.70,0.85,0.85]],
+      'ふ': [[0.48,0.12,0.42,0.30],[0.30,0.38,0.45,0.85],[0.10,0.50,0.20,0.66],[0.72,0.46,0.85,0.62]],
       'へ': [[0.12,0.62,0.88,0.42]],
       'ほ': [[0.20,0.12,0.18,0.88],[0.45,0.28,0.88,0.25],[0.45,0.52,0.88,0.50],[0.68,0.15,0.75,0.88]],
       'ま': [[0.15,0.28,0.85,0.26],[0.18,0.55,0.82,0.53],[0.55,0.10,0.48,0.90]],
       'み': [[0.28,0.15,0.40,0.72],[0.78,0.35,0.85,0.85]],
-      'む': [[0.12,0.32,0.82,0.30],[0.45,0.12,0.55,0.88],[0.85,0.55,0.90,0.72]],
+      'む': [[0.12,0.32,0.82,0.30],[0.45,0.12,0.55,0.88],[0.80,0.40,0.88,0.55]],
       'め': [[0.30,0.18,0.18,0.82],[0.62,0.12,0.78,0.78]],
       'も': [[0.55,0.08,0.35,0.88],[0.15,0.32,0.80,0.30],[0.18,0.58,0.82,0.56]],
       'や': [[0.12,0.35,0.60,0.55],[0.80,0.18,0.88,0.45],[0.52,0.08,0.35,0.92]],
@@ -196,25 +208,25 @@
       'ウ': [[0.50,0.08,0.52,0.25],[0.16,0.30,0.10,0.68],[0.24,0.26,0.60,0.90]],
       'エ': [[0.15,0.20,0.85,0.20],[0.50,0.22,0.50,0.78],[0.10,0.82,0.90,0.82]],
       'オ': [[0.12,0.30,0.85,0.28],[0.62,0.10,0.45,0.90],[0.55,0.32,0.20,0.82]],
-      'カ': [[0.15,0.25,0.20,0.85],[0.62,0.15,0.72,0.85]],
+      'カ': [[0.10,0.30,0.42,0.85],[0.30,0.10,0.08,0.78]],
       'キ': [[0.15,0.32,0.85,0.25],[0.12,0.58,0.88,0.52],[0.68,0.10,0.42,0.90]],
-      'ク': [[0.22,0.20,0.62,0.62],[0.72,0.22,0.20,0.88]],
-      'ケ': [[0.32,0.12,0.18,0.50],[0.25,0.32,0.72,0.68],[0.58,0.32,0.48,0.90]],
+      'ク': [[0.48,0.10,0.25,0.42],[0.28,0.32,0.18,0.88]],
+      'ケ': [[0.32,0.12,0.18,0.50],[0.25,0.35,0.85,0.32],[0.58,0.32,0.48,0.90]],
       'コ': [[0.15,0.22,0.82,0.78],[0.15,0.80,0.82,0.80]],
-      'サ': [[0.30,0.15,0.22,0.55],[0.10,0.42,0.90,0.38],[0.62,0.15,0.55,0.90]],
+      'サ': [[0.10,0.42,0.90,0.38],[0.30,0.15,0.22,0.55],[0.62,0.15,0.55,0.90]],
       'シ': [[0.20,0.25,0.35,0.32],[0.20,0.50,0.35,0.58],[0.75,0.15,0.25,0.85]],
       'ス': [[0.15,0.20,0.22,0.88],[0.45,0.50,0.85,0.88]],
-      'セ': [[0.12,0.35,0.72,0.88],[0.70,0.12,0.75,0.55]],
+      'セ': [[0.12,0.38,0.85,0.30],[0.35,0.08,0.85,0.82]],
       'ソ': [[0.28,0.20,0.38,0.38],[0.75,0.18,0.25,0.85]],
-      'タ': [[0.22,0.20,0.62,0.62],[0.72,0.22,0.20,0.88],[0.42,0.52,0.62,0.70]],
-      'チ': [[0.20,0.22,0.70,0.15],[0.12,0.48,0.88,0.45],[0.65,0.20,0.42,0.90]],
+      'タ': [[0.48,0.10,0.25,0.42],[0.28,0.32,0.18,0.88],[0.40,0.55,0.60,0.70]],
+      'チ': [[0.70,0.10,0.20,0.25],[0.12,0.48,0.88,0.45],[0.65,0.20,0.42,0.90]],
       'ツ': [[0.20,0.20,0.28,0.42],[0.48,0.20,0.56,0.42],[0.78,0.18,0.28,0.85]],
       'テ': [[0.20,0.20,0.75,0.18],[0.12,0.45,0.88,0.42],[0.62,0.48,0.42,0.90]],
       'ト': [[0.35,0.10,0.35,0.90],[0.38,0.42,0.80,0.68]],
       'ナ': [[0.10,0.32,0.90,0.30],[0.62,0.10,0.42,0.90]],
       'ニ': [[0.22,0.30,0.78,0.28],[0.12,0.72,0.88,0.70]],
       'ヌ': [[0.15,0.22,0.22,0.88],[0.40,0.30,0.85,0.88]],
-      'ネ': [[0.48,0.08,0.50,0.22],[0.15,0.32,0.85,0.30],[0.62,0.34,0.15,0.88],[0.48,0.55,0.44,0.92]],
+      'ネ': [[0.48,0.08,0.50,0.22],[0.15,0.30,0.12,0.85],[0.48,0.30,0.46,0.92],[0.62,0.55,0.80,0.72]],
       'ノ': [[0.78,0.15,0.20,0.85]],
       'ハ': [[0.42,0.20,0.15,0.85],[0.58,0.30,0.88,0.85]],
       'ヒ': [[0.25,0.42,0.75,0.25],[0.25,0.12,0.85,0.82]],
@@ -224,15 +236,15 @@
       'マ': [[0.15,0.22,0.30,0.62],[0.55,0.42,0.45,0.90]],
       'ミ': [[0.22,0.20,0.78,0.30],[0.25,0.45,0.80,0.55],[0.20,0.68,0.82,0.82]],
       'ム': [[0.55,0.18,0.25,0.72],[0.22,0.68,0.85,0.85]],
-      'メ': [[0.22,0.30,0.85,0.82],[0.78,0.15,0.18,0.88]],
-      'モ': [[0.22,0.25,0.75,0.22],[0.12,0.50,0.88,0.48],[0.55,0.12,0.45,0.88]],
+      'メ': [[0.78,0.15,0.18,0.88],[0.22,0.30,0.85,0.82]],
+      'モ': [[0.22,0.25,0.75,0.22],[0.12,0.50,0.88,0.48],[0.55,0.12,0.80,0.78]],
       'ヤ': [[0.18,0.25,0.88,0.32],[0.58,0.08,0.48,0.92]],
       'ユ': [[0.20,0.25,0.72,0.75],[0.12,0.82,0.88,0.82]],
       'ヨ': [[0.18,0.20,0.82,0.82],[0.28,0.50,0.82,0.50],[0.18,0.82,0.82,0.82]],
       'ラ': [[0.25,0.18,0.70,0.18],[0.15,0.42,0.35,0.90]],
       'リ': [[0.28,0.15,0.25,0.70],[0.75,0.15,0.55,0.85]],
       'ル': [[0.28,0.20,0.25,0.80],[0.60,0.15,0.88,0.82]],
-      'レ': [[0.25,0.15,0.88,0.18]],
+      'レ': [[0.28,0.10,0.85,0.55]],
       'ロ': [[0.18,0.20,0.18,0.82],[0.24,0.20,0.82,0.82],[0.20,0.82,0.82,0.82]],
       'ワ': [[0.14,0.30,0.10,0.70],[0.22,0.24,0.60,0.90]],
       'ヲ': [[0.15,0.22,0.85,0.20],[0.20,0.48,0.85,0.46],[0.70,0.48,0.35,0.88]],
@@ -369,6 +381,161 @@
       return box;
     };
 
+    // おてほん の ピクセル データ (もじ ごと に つかいまわす)
+    //   core: もじ そのもの / fat: すこし ふとらせた もじ (はみだし はんてい よう)
+    const targetDataCache = {};
+    const getTargetData = (char, penSize) => {
+      const key = `${char}:${penSize}`;
+      if (targetDataCache[key]) return targetDataCache[key];
+      const render = (borderWidth) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = CANVAS_SIZE;
+        canvas.height = CANVAS_SIZE;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.font = KANA_FONT;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000000';
+        ctx.fillText(char, CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+        if (borderWidth > 0) {
+          ctx.lineWidth = borderWidth;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#000000';
+          ctx.strokeText(char, CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+        }
+        return ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE).data;
+      };
+      const data = {
+        core: render(0),
+        fat: render(Math.max(penSize * 2.5, 55)),
+      };
+      targetDataCache[key] = data;
+      return data;
+    };
+
+    // フォント の よみこみ が おわったら、ふるい キャッシュ を すてる
+    const clearJudgeCaches = () => {
+      Object.keys(glyphBoxCache).forEach(k => delete glyphBoxCache[k]);
+      Object.keys(targetDataCache).forEach(k => delete targetDataCache[k]);
+    };
+
+    const renderUserPaths = (paths, lineWidth) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = CANVAS_SIZE;
+      canvas.height = CANVAS_SIZE;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#000000';
+      paths.forEach(path => {
+        if (path.length === 0) return;
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        if (path.length === 1) {
+          ctx.lineTo(path[0].x, path[0].y + 0.1);
+        } else {
+          for (let i = 1; i < path.length; i++) {
+            ctx.lineTo(path[i].x, path[i].y);
+          }
+        }
+        ctx.stroke();
+      });
+      return ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE).data;
+    };
+
+    // かいた もじ を おてほん の おおきさ・いち に そろえる
+    // (マス の どこ に かいて いても、かたち その もの で はんてい する ため)
+    const alignPathsToGlyph = (paths, char) => {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      paths.forEach(path => path.forEach(pt => {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+      }));
+      const box = getGlyphBox(char);
+      const uw = Math.max(maxX - minX, 1);
+      const uh = Math.max(maxY - minY, 1);
+      const sizeRatio = Math.max(uw, uh) / Math.max(box.w, box.h);
+      // たてよこ の バランス は くずさない よう に、おなじ ばいりつ で そろえる
+      const scale = Math.min(2.2, Math.max(0.55, Math.min(box.w / uw, box.h / uh)));
+      const ucx = (minX + maxX) / 2, ucy = (minY + maxY) / 2;
+      const gcx = box.x + box.w / 2, gcy = box.y + box.h / 2;
+      const aligned = paths.map(path => path.map(pt => ({
+        x: gcx + (pt.x - ucx) * scale,
+        y: gcy + (pt.y - ucy) * scale,
+      })));
+      return { aligned, sizeRatio };
+    };
+
+    // ---------------------------------------------------------------
+    // 1もじ ぶん の さいてん
+    //   1. かくすう
+    //   2. おおきさ (ちいさすぎ ない か)
+    //   3. かたち (おてほん の せん の ちかく を とおって いるか / はみだし)
+    //   4. かきじゅん (レベル に よる)
+    // ---------------------------------------------------------------
+    const judgeCharacter = (paths, char, charType, penSize, level) => {
+      const targetStrokeCount = charType === 'hiragana' ? HIRAGANA_STROKES[char] : KATAKANA_STROKES[char];
+
+      let totalPoints = 0;
+      paths.forEach(path => { totalPoints += path.length; });
+      if (totalPoints < 2) return { ok: false, reason: 'empty' };
+
+      if (paths.length !== targetStrokeCount) {
+        return { ok: false, reason: 'strokeCount', targetStrokeCount };
+      }
+
+      const { aligned, sizeRatio } = alignPathsToGlyph(paths, char);
+      if (sizeRatio < 0.45) return { ok: false, reason: 'small' };
+
+      const { core: targetData, fat: targetDataFat } = getTargetData(char, penSize);
+      const userData = renderUserPaths(aligned, penSize);
+      // せん の いち ずれ を ゆるす ため、カバー はんてい は ふとい ペン で みる
+      const userDataFat = renderUserPaths(aligned, Math.max(penSize * 2.2, 48));
+
+      let targetPixelCount = 0;
+      let coveredPixelCount = 0;
+      let userPixelCount = 0;
+      let userInsideFatCount = 0;
+      const step = 4;
+
+      for (let y = 0; y < CANVAS_SIZE; y += step) {
+        for (let x = 0; x < CANVAS_SIZE; x += step) {
+          const i = (y * CANVAS_SIZE + x) * 4 + 3;
+          if (targetData[i] > 50) {
+            targetPixelCount++;
+            if (userDataFat[i] > 50) coveredPixelCount++;
+          }
+          if (userData[i] > 50) {
+            userPixelCount++;
+            if (targetDataFat[i] > 50) userInsideFatCount++;
+          }
+        }
+      }
+
+      const coverRate = targetPixelCount === 0 ? 0 : coveredPixelCount / targetPixelCount;
+      const insideRate = userPixelCount === 0 ? 0 : userInsideFatCount / userPixelCount;
+      const isNotCheating = userPixelCount < targetPixelCount * level.cheat;
+
+      // かく が すくない もじ は 1ぼん の おもみ が おおきい ので すこし やさしく
+      let coverThreshold = level.cover;
+      if (targetStrokeCount <= 2) coverThreshold -= 0.08;
+      else if (targetStrokeCount <= 4) coverThreshold -= 0.04;
+
+      if (insideRate < level.inside || !isNotCheating) return { ok: false, reason: 'protrude', coverRate, insideRate };
+      if (coverRate < coverThreshold) return { ok: false, reason: 'shape', coverRate, insideRate };
+
+      const strokeOrderData = getStrokeOrder(charType, char);
+      if (strokeOrderData) {
+        const orderResult = judgeStrokeOrder(paths, strokeOrderData, level.orderTolerance);
+        if (!orderResult.ok) return { ok: false, reason: 'order', wrongIndex: orderResult.wrongIndex, coverRate, insideRate };
+      }
+
+      return { ok: true, coverRate, insideRate };
+    };
+
     // かきじゅん データ の はんい を、じっさい の もじ が えがかれる はんい に あわせる
     const makeStrokeMapper = (char, strokes) => {
       const box = getGlyphBox(char);
@@ -424,10 +591,23 @@
       ctx.restore();
     };
 
+    // かいはつ・テスト よう の フック (アプリ の うごき には えいきょう しない)
+    window.__mojiNoteTest = {
+      judgeCharacter, judgeStrokeOrder, alignPathsToGlyph, getGlyphBox, makeStrokeMapper,
+      getStrokeOrder, DIFFICULTY_LEVELS, HIRAGANA_STROKES, KATAKANA_STROKES, STROKE_ORDER,
+    };
+
     const App = () => {
       const [isFontLoaded, setIsFontLoaded] = useState(false);
       useEffect(() => {
-        document.fonts.load('10px "Klee One"').then(() => setIsFontLoaded(true));
+        let cancelled = false;
+        Promise.all([document.fonts.load('10px "Klee One"'), document.fonts.ready]).then(() => {
+          if (cancelled) return;
+          // フォント よみこみ まえ に つくった おてほん キャッシュ を すてて かきなおす
+          clearJudgeCaches();
+          setIsFontLoaded(true);
+        });
+        return () => { cancelled = true; };
       }, []);
 
       const [gameState, setGameState] = useState('TITLE'); 
@@ -476,13 +656,13 @@
           if (useDakuon) {
             chars = chars.concat(charType === 'hiragana' ? HIRAGANA_DAKUON : KATAKANA_DAKUON);
           }
-          qList = chars.sort(() => 0.5 - Math.random()).slice(0, 10);
+          qList = shuffleArray(chars).slice(0, 10);
         } else {
           let words = charType === 'hiragana' ? HIRAGANA_WORDS : KATAKANA_WORDS;
           if (!useDakuon) {
             words = words.filter(word => !DAKUON_REGEX.test(word));
           }
-          qList = words.sort(() => 0.5 - Math.random()).slice(0, 5);
+          qList = shuffleArray(words).slice(0, 5);
         }
         
         setQuestions(qList);
@@ -533,7 +713,7 @@
         if (gameState === 'PRACTICE' && targetChars.length > 0) {
           clearCanvas();
         }
-      }, [gameState, currentIndex, currentStep, questions]);
+      }, [gameState, currentIndex, currentStep, questions, isFontLoaded]);
 
       const clearCanvas = () => {
         pathsRef.current = Array.from({ length: targetChars.length }, () => []);
@@ -647,149 +827,32 @@
       };
 
       const checkWriting = () => {
+        if (feedback !== null) return;
         let allCorrect = true;
         let hasNoInput = false;
         let firstErrorMsg = '';
 
         targetChars.forEach((char, idx) => {
-          const paths = pathsRef.current[idx];
-          const targetStrokeCount = charType === 'hiragana' ? HIRAGANA_STROKES[char] : KATAKANA_STROKES[char];
-          
-          let totalPoints = 0;
-          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-          const halfPen = penSize / 2;
+          const result = judgeCharacter(pathsRef.current[idx] || [], char, charType, penSize, level);
+          if (result.ok) return;
 
-          if (paths) {
-            paths.forEach(path => {
-              path.forEach(pt => {
-                if (pt.x - halfPen < minX) minX = pt.x - halfPen;
-                if (pt.x + halfPen > maxX) maxX = pt.x + halfPen;
-                if (pt.y - halfPen < minY) minY = pt.y - halfPen;
-                if (pt.y + halfPen > maxY) maxY = pt.y + halfPen;
-                totalPoints++;
-              });
-            });
-          }
-
-          if (totalPoints < 2) {
-            allCorrect = false;
+          allCorrect = false;
+          if (result.reason === 'empty') {
             hasNoInput = true;
             return;
           }
-
-          const width = CANVAS_SIZE;
-          const height = CANVAS_SIZE;
-          const normalizedPaths = paths;
-
-          const targetCanvas = document.createElement('canvas');
-          targetCanvas.width = width;
-          targetCanvas.height = height;
-          const targetCtx = targetCanvas.getContext('2d', { willReadFrequently: true });
-          targetCtx.font = KANA_FONT;
-          targetCtx.textAlign = 'center';
-          targetCtx.textBaseline = 'middle';
-          targetCtx.fillStyle = '#FF0000';
-          targetCtx.fillText(char, width / 2, height / 2);
-          const targetData = targetCtx.getImageData(0, 0, width, height).data;
-
-          const targetCanvasFat = document.createElement('canvas');
-          targetCanvasFat.width = width;
-          targetCanvasFat.height = height;
-          const targetCtxFat = targetCanvasFat.getContext('2d', { willReadFrequently: true });
-          targetCtxFat.font = KANA_FONT;
-          targetCtxFat.textAlign = 'center';
-          targetCtxFat.textBaseline = 'middle';
-          targetCtxFat.fillStyle = '#FF0000';
-          targetCtxFat.fillText(char, width / 2, height / 2);
-          targetCtxFat.lineWidth = penSize * 2.5;
-          targetCtxFat.lineJoin = 'round';
-          targetCtxFat.strokeStyle = '#FF0000';
-          targetCtxFat.strokeText(char, width / 2, height / 2);
-          const targetDataFat = targetCtxFat.getImageData(0, 0, width, height).data;
-
-          const userCanvas = document.createElement('canvas');
-          userCanvas.width = width;
-          userCanvas.height = height;
-          const userCtx = userCanvas.getContext('2d', { willReadFrequently: true });
-          userCtx.lineWidth = penSize;
-          userCtx.lineCap = 'round';
-          userCtx.lineJoin = 'round';
-          userCtx.strokeStyle = '#000000';
-
-          normalizedPaths.forEach(path => {
-            if (path.length === 0) return;
-            userCtx.beginPath();
-            userCtx.moveTo(path[0].x, path[0].y);
-            if (path.length === 1) {
-              userCtx.lineTo(path[0].x, path[0].y + 0.1);
+          if (!firstErrorMsg) {
+            const displayIdx = targetChars.length > 1 ? `${idx + 1}もじめの ` : '';
+            if (result.reason === 'strokeCount') {
+              firstErrorMsg = `${displayIdx}かくすう が ちがうよ！\n(せいかいは ${result.targetStrokeCount} かく)`;
+            } else if (result.reason === 'order') {
+              firstErrorMsg = `${displayIdx}かきじゅん が ちがうよ！\n(${result.wrongIndex + 1} かくめ を みてね)`;
+            } else if (result.reason === 'small') {
+              firstErrorMsg = `${displayIdx}もっと おおきく かいてみよう！`;
+            } else if (result.reason === 'protrude') {
+              firstErrorMsg = `${displayIdx}はみだし が おおいみたい`;
             } else {
-              for (let i = 1; i < path.length; i++) {
-                userCtx.lineTo(path[i].x, path[i].y);
-              }
-            }
-            userCtx.stroke();
-          });
-
-          const userData = userCtx.getImageData(0, 0, width, height).data;
-
-          let targetPixelCount = 0;
-          let userPixelCount = 0;
-          let coveredPixelCount = 0;
-          let userInsideFatCount = 0;
-          const step = 4;
-
-          for (let y = 0; y < height; y += step) {
-            for (let x = 0; x < width; x += step) {
-              const i = (y * width + x) * 4;
-              const isTargetCore = targetData[i + 3] > 50;
-              const isTargetFat = targetDataFat[i + 3] > 50;
-              const isUser = userData[i + 3] > 50;
-
-              if (isTargetCore) targetPixelCount++;
-              if (isUser) {
-                userPixelCount++;
-                if (isTargetCore) coveredPixelCount++;
-                if (isTargetFat) userInsideFatCount++;
-              }
-            }
-          }
-
-          const coverRate = targetPixelCount === 0 ? 0 : coveredPixelCount / targetPixelCount;
-          const insideRate = userPixelCount === 0 ? 0 : userInsideFatCount / userPixelCount;
-          const isNotCheating = userPixelCount < targetPixelCount * level.cheat;
-
-          const userStrokeCount = paths.length;
-          const isStrokeCorrect = userStrokeCount === targetStrokeCount;
-
-          let coverThreshold = level.cover;
-          if (targetStrokeCount <= 2) {
-            coverThreshold -= 0.15;
-          } else if (targetStrokeCount <= 4) {
-            coverThreshold -= 0.10;
-          }
-          coverThreshold = Math.max(level.minCover, coverThreshold);
-
-          const isShapeCorrect = (coverRate >= coverThreshold) && (insideRate >= level.inside) && isNotCheating;
-
-          // かたち と かくすう が あって いる ときだけ かきじゅん を みる
-          const strokeOrderData = getStrokeOrder(charType, char);
-          const orderResult = (isStrokeCorrect && isShapeCorrect && strokeOrderData)
-            ? judgeStrokeOrder(paths, strokeOrderData, level.orderTolerance)
-            : { ok: true, wrongIndex: -1 };
-
-          const isCorrect = isStrokeCorrect && isShapeCorrect && orderResult.ok;
-
-          if (!isCorrect) {
-            allCorrect = false;
-            if (!firstErrorMsg) {
-              const displayIdx = targetChars.length > 1 ? `${idx + 1}もじめの ` : '';
-              if (!isStrokeCorrect) {
-                firstErrorMsg = `${displayIdx}かくすう が ちがうよ！\n(せいかいは ${targetStrokeCount} かく)`;
-              } else if (!orderResult.ok) {
-                firstErrorMsg = `${displayIdx}かきじゅん が ちがうよ！\n(${orderResult.wrongIndex + 1} かくめ を みてね)`;
-              } else {
-                firstErrorMsg = `${displayIdx}かたちが すこし ちがうみたい`;
-              }
+              firstErrorMsg = `${displayIdx}かたちが すこし ちがうみたい`;
             }
           }
         });
@@ -932,7 +995,7 @@
                     return (
                       <div key={idx} className="relative rounded-2xl aspect-square shadow-md overflow-hidden bg-white border-2 border-gray-200 shrink-0" style={{ width: '100%', maxWidth: maxWidth }}>
                         <canvas ref={el => bgCanvasRefs.current[idx] = el} width={CANVAS_SIZE} height={CANVAS_SIZE} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
-                        <canvas ref={el => drawCanvasRefs.current[idx] = el} width={CANVAS_SIZE} height={CANVAS_SIZE} onMouseDown={(e) => startDrawing(e, idx)} onMouseMove={(e) => draw(e, idx)} onMouseUp={(e) => stopDrawing(e, idx)} onMouseOut={(e) => stopDrawing(e, idx)} onTouchStart={(e) => startDrawing(e, idx)} onTouchMove={(e) => draw(e, idx)} onTouchEnd={(e) => stopDrawing(e, idx)} className="cursor-crosshair absolute top-0 left-0 w-full h-full touch-none" />
+                        <canvas ref={el => drawCanvasRefs.current[idx] = el} width={CANVAS_SIZE} height={CANVAS_SIZE} onMouseDown={(e) => startDrawing(e, idx)} onMouseMove={(e) => draw(e, idx)} onMouseUp={(e) => stopDrawing(e, idx)} onMouseOut={(e) => stopDrawing(e, idx)} onTouchStart={(e) => startDrawing(e, idx)} onTouchMove={(e) => draw(e, idx)} onTouchEnd={(e) => stopDrawing(e, idx)} onTouchCancel={(e) => stopDrawing(e, idx)} className="cursor-crosshair absolute top-0 left-0 w-full h-full touch-none" />
                       </div>
                     );
                   })}
