@@ -105,6 +105,325 @@
 
     const DAKUON_REGEX = /[が-ぼぱ-ぽガ-ボパ-ポ]/;
 
+    const CANVAS_SIZE = 400;
+    const KANA_FONT = '340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif';
+
+    // ---------------------------------------------------------------
+    // はんてい の レベル (3だんかい)
+    //   cover  : おてほん を どれだけ なぞれて いるか
+    //   inside : はみだして いないか
+    //   cheat  : ぬりつぶし よけ (おてほん の なんばい まで ゆるすか)
+    //   orderTolerance : かきじゅん はんてい の きびしさ (null = はんてい しない)
+    // ---------------------------------------------------------------
+    const DIFFICULTY_LEVELS = {
+      easy: {
+        label: 'かんたん',
+        desc: 'かたち だけ\nみるよ',
+        hint: 'かくすう と かたち だけ を みます。はじめて の ひと むけ。',
+        cover: 0.42, minCover: 0.25, inside: 0.55, cheat: 4.5, orderTolerance: null,
+      },
+      normal: {
+        label: 'ふつう',
+        desc: 'かきじゅん も\nみるよ',
+        hint: 'かくすう・かたち に くわえて、かきじゅん も やさしく みます。',
+        cover: 0.52, minCover: 0.30, inside: 0.65, cheat: 3.8, orderTolerance: 0.30,
+      },
+      hard: {
+        label: 'むずかしい',
+        desc: 'かきじゅん を\nしっかり みるよ',
+        hint: 'かきじゅん を きちんと みます。まえ の 「ふつう」 くらい の かたち の きびしさ です。',
+        cover: 0.60, minCover: 0.35, inside: 0.70, cheat: 3.2, orderTolerance: 0.16,
+      },
+    };
+
+    // ---------------------------------------------------------------
+    // かきじゅん データ
+    // 1かく = [はじまりx, はじまりy, おわりx, おわりy] (0〜1 の わりあい)
+    // ばしょ は 「じゅんばん を みわける」 ため の めやす
+    // ---------------------------------------------------------------
+    const HIRAGANA_STROKE_ORDER = {
+      'あ': [[0.12,0.30,0.85,0.30],[0.55,0.08,0.42,0.92],[0.78,0.42,0.85,0.82]],
+      'い': [[0.28,0.18,0.48,0.78],[0.80,0.25,0.84,0.60]],
+      'う': [[0.35,0.12,0.65,0.12],[0.25,0.35,0.35,0.90]],
+      'え': [[0.42,0.10,0.60,0.10],[0.25,0.35,0.85,0.85]],
+      'お': [[0.10,0.28,0.72,0.28],[0.48,0.08,0.55,0.80],[0.85,0.40,0.90,0.58]],
+      'か': [[0.12,0.28,0.22,0.85],[0.60,0.12,0.68,0.88],[0.88,0.28,0.82,0.50]],
+      'き': [[0.20,0.22,0.72,0.18],[0.15,0.42,0.70,0.38],[0.62,0.05,0.35,0.62],[0.62,0.62,0.42,0.92]],
+      'く': [[0.68,0.12,0.70,0.88]],
+      'け': [[0.22,0.15,0.18,0.85],[0.45,0.30,0.90,0.30],[0.72,0.12,0.78,0.85]],
+      'こ': [[0.20,0.22,0.78,0.22],[0.25,0.72,0.80,0.75]],
+      'さ': [[0.22,0.25,0.78,0.22],[0.62,0.08,0.35,0.62],[0.65,0.60,0.42,0.92]],
+      'し': [[0.30,0.10,0.85,0.72]],
+      'す': [[0.15,0.28,0.85,0.28],[0.60,0.10,0.55,0.92]],
+      'せ': [[0.12,0.35,0.80,0.30],[0.35,0.10,0.60,0.88],[0.72,0.15,0.78,0.62]],
+      'そ': [[0.20,0.18,0.25,0.88]],
+      'た': [[0.08,0.30,0.52,0.28],[0.38,0.08,0.25,0.80],[0.60,0.48,0.92,0.48],[0.62,0.80,0.92,0.82]],
+      'ち': [[0.20,0.22,0.80,0.20],[0.58,0.05,0.35,0.88]],
+      'つ': [[0.20,0.28,0.30,0.80]],
+      'て': [[0.18,0.22,0.55,0.88]],
+      'と': [[0.55,0.15,0.60,0.55],[0.28,0.45,0.85,0.85]],
+      'な': [[0.08,0.30,0.52,0.28],[0.38,0.08,0.22,0.85],[0.70,0.15,0.72,0.42],[0.62,0.55,0.68,0.88]],
+      'に': [[0.22,0.15,0.18,0.85],[0.52,0.30,0.88,0.28],[0.48,0.75,0.92,0.75]],
+      'ぬ': [[0.30,0.18,0.18,0.82],[0.62,0.12,0.78,0.75]],
+      'ね': [[0.22,0.12,0.20,0.88],[0.55,0.18,0.80,0.78]],
+      'の': [[0.75,0.22,0.62,0.85]],
+      'は': [[0.20,0.12,0.18,0.88],[0.42,0.35,0.88,0.32],[0.68,0.12,0.72,0.85]],
+      'ひ': [[0.15,0.30,0.85,0.60]],
+      'ふ': [[0.48,0.12,0.42,0.30],[0.30,0.38,0.45,0.85],[0.72,0.42,0.78,0.55],[0.75,0.70,0.85,0.85]],
+      'へ': [[0.12,0.62,0.88,0.42]],
+      'ほ': [[0.20,0.12,0.18,0.88],[0.45,0.28,0.88,0.25],[0.45,0.52,0.88,0.50],[0.68,0.15,0.75,0.88]],
+      'ま': [[0.15,0.28,0.85,0.26],[0.18,0.55,0.82,0.53],[0.55,0.10,0.48,0.90]],
+      'み': [[0.28,0.15,0.40,0.72],[0.78,0.35,0.85,0.85]],
+      'む': [[0.12,0.32,0.82,0.30],[0.45,0.12,0.55,0.88],[0.85,0.55,0.90,0.72]],
+      'め': [[0.30,0.18,0.18,0.82],[0.62,0.12,0.78,0.78]],
+      'も': [[0.55,0.08,0.35,0.88],[0.15,0.32,0.80,0.30],[0.18,0.58,0.82,0.56]],
+      'や': [[0.12,0.35,0.60,0.55],[0.80,0.18,0.88,0.45],[0.52,0.08,0.35,0.92]],
+      'ゆ': [[0.35,0.12,0.55,0.85],[0.70,0.20,0.60,0.90]],
+      'よ': [[0.20,0.20,0.78,0.18],[0.52,0.08,0.35,0.85]],
+      'ら': [[0.30,0.15,0.50,0.32],[0.60,0.32,0.32,0.90]],
+      'り': [[0.28,0.15,0.32,0.65],[0.75,0.12,0.45,0.90]],
+      'る': [[0.22,0.20,0.62,0.80]],
+      'れ': [[0.22,0.12,0.20,0.88],[0.55,0.18,0.88,0.80]],
+      'ろ': [[0.22,0.20,0.30,0.88]],
+      'わ': [[0.22,0.12,0.20,0.88],[0.55,0.18,0.80,0.85]],
+      'を': [[0.18,0.25,0.82,0.22],[0.55,0.10,0.25,0.62],[0.28,0.55,0.85,0.88]],
+      'ん': [[0.20,0.25,0.82,0.80]],
+    };
+
+    const KATAKANA_STROKE_ORDER = {
+      'ア': [[0.12,0.22,0.82,0.35],[0.62,0.30,0.25,0.88]],
+      'イ': [[0.75,0.15,0.25,0.55],[0.50,0.35,0.45,0.90]],
+      'ウ': [[0.50,0.08,0.52,0.25],[0.16,0.30,0.10,0.68],[0.24,0.26,0.60,0.90]],
+      'エ': [[0.15,0.20,0.85,0.20],[0.50,0.22,0.50,0.78],[0.10,0.82,0.90,0.82]],
+      'オ': [[0.12,0.30,0.85,0.28],[0.62,0.10,0.45,0.90],[0.55,0.32,0.20,0.82]],
+      'カ': [[0.15,0.25,0.20,0.85],[0.62,0.15,0.72,0.85]],
+      'キ': [[0.15,0.32,0.85,0.25],[0.12,0.58,0.88,0.52],[0.68,0.10,0.42,0.90]],
+      'ク': [[0.22,0.20,0.62,0.62],[0.72,0.22,0.20,0.88]],
+      'ケ': [[0.32,0.12,0.18,0.50],[0.25,0.32,0.72,0.68],[0.58,0.32,0.48,0.90]],
+      'コ': [[0.15,0.22,0.82,0.78],[0.15,0.80,0.82,0.80]],
+      'サ': [[0.30,0.15,0.22,0.55],[0.10,0.42,0.90,0.38],[0.62,0.15,0.55,0.90]],
+      'シ': [[0.20,0.25,0.35,0.32],[0.20,0.50,0.35,0.58],[0.75,0.15,0.25,0.85]],
+      'ス': [[0.15,0.20,0.22,0.88],[0.45,0.50,0.85,0.88]],
+      'セ': [[0.12,0.35,0.72,0.88],[0.70,0.12,0.75,0.55]],
+      'ソ': [[0.28,0.20,0.38,0.38],[0.75,0.18,0.25,0.85]],
+      'タ': [[0.22,0.20,0.62,0.62],[0.72,0.22,0.20,0.88],[0.42,0.52,0.62,0.70]],
+      'チ': [[0.20,0.22,0.70,0.15],[0.12,0.48,0.88,0.45],[0.65,0.20,0.42,0.90]],
+      'ツ': [[0.20,0.20,0.28,0.42],[0.48,0.20,0.56,0.42],[0.78,0.18,0.28,0.85]],
+      'テ': [[0.20,0.20,0.75,0.18],[0.12,0.45,0.88,0.42],[0.62,0.48,0.42,0.90]],
+      'ト': [[0.35,0.10,0.35,0.90],[0.38,0.42,0.80,0.68]],
+      'ナ': [[0.10,0.32,0.90,0.30],[0.62,0.10,0.42,0.90]],
+      'ニ': [[0.22,0.30,0.78,0.28],[0.12,0.72,0.88,0.70]],
+      'ヌ': [[0.15,0.22,0.22,0.88],[0.40,0.30,0.85,0.88]],
+      'ネ': [[0.48,0.08,0.50,0.22],[0.15,0.32,0.85,0.30],[0.62,0.34,0.15,0.88],[0.48,0.55,0.44,0.92]],
+      'ノ': [[0.78,0.15,0.20,0.85]],
+      'ハ': [[0.42,0.20,0.15,0.85],[0.58,0.30,0.88,0.85]],
+      'ヒ': [[0.25,0.42,0.75,0.25],[0.25,0.12,0.85,0.82]],
+      'フ': [[0.15,0.22,0.35,0.88]],
+      'ヘ': [[0.12,0.62,0.88,0.42]],
+      'ホ': [[0.12,0.32,0.88,0.30],[0.50,0.10,0.50,0.90],[0.30,0.50,0.15,0.85],[0.70,0.50,0.88,0.85]],
+      'マ': [[0.15,0.22,0.30,0.62],[0.55,0.42,0.45,0.90]],
+      'ミ': [[0.22,0.20,0.78,0.30],[0.25,0.45,0.80,0.55],[0.20,0.68,0.82,0.82]],
+      'ム': [[0.55,0.18,0.25,0.72],[0.22,0.68,0.85,0.85]],
+      'メ': [[0.22,0.30,0.85,0.82],[0.78,0.15,0.18,0.88]],
+      'モ': [[0.22,0.25,0.75,0.22],[0.12,0.50,0.88,0.48],[0.55,0.12,0.45,0.88]],
+      'ヤ': [[0.18,0.25,0.88,0.32],[0.58,0.08,0.48,0.92]],
+      'ユ': [[0.20,0.25,0.72,0.75],[0.12,0.82,0.88,0.82]],
+      'ヨ': [[0.18,0.20,0.82,0.82],[0.28,0.50,0.82,0.50],[0.18,0.82,0.82,0.82]],
+      'ラ': [[0.25,0.18,0.70,0.18],[0.15,0.42,0.35,0.90]],
+      'リ': [[0.28,0.15,0.25,0.70],[0.75,0.15,0.55,0.85]],
+      'ル': [[0.28,0.20,0.25,0.80],[0.60,0.15,0.88,0.82]],
+      'レ': [[0.25,0.15,0.88,0.18]],
+      'ロ': [[0.18,0.20,0.18,0.82],[0.24,0.20,0.82,0.82],[0.20,0.82,0.82,0.82]],
+      'ワ': [[0.14,0.30,0.10,0.70],[0.22,0.24,0.60,0.90]],
+      'ヲ': [[0.15,0.22,0.85,0.20],[0.20,0.48,0.85,0.46],[0.70,0.48,0.35,0.88]],
+      'ン': [[0.22,0.22,0.38,0.32],[0.22,0.78,0.85,0.22]],
+      'ー': [[0.10,0.50,0.90,0.50]],
+    };
+
+    // だくてん(゛) は さいご に 2かく、はんだくてん(゜) は さいご に 1かく
+    const DAKUTEN_STROKES = [[0.80,0.04,0.74,0.20],[0.93,0.04,0.87,0.20]];
+    const HANDAKUTEN_STROKES = [[0.80,0.10,0.88,0.16]];
+
+    const SMALL_KANA_BASE = {
+      'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','っ':'つ','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ',
+      'ァ':'ア','ィ':'イ','ゥ':'ウ','ェ':'エ','ォ':'オ','ッ':'ツ','ャ':'ヤ','ュ':'ユ','ョ':'ヨ','ヮ':'ワ',
+    };
+
+    // だくおん・はんだくおん・ちいさい もじ を もと の もじ から くみたてる
+    const buildStrokeOrderTable = (base) => {
+      const table = Object.assign({}, base);
+      Object.keys(SMALL_KANA_BASE).forEach(small => {
+        const src = base[SMALL_KANA_BASE[small]];
+        if (src) table[small] = src;
+      });
+      [...HIRAGANA_DAKUON, ...KATAKANA_DAKUON].forEach(char => {
+        const code = char.charCodeAt(0);
+        const seion = base[String.fromCharCode(code - 1)];
+        if (seion) { table[char] = seion.concat(DAKUTEN_STROKES); return; }
+        const seionH = base[String.fromCharCode(code - 2)];
+        if (seionH) table[char] = seionH.concat(HANDAKUTEN_STROKES);
+      });
+      return table;
+    };
+
+    const STROKE_ORDER = {
+      hiragana: buildStrokeOrderTable(HIRAGANA_STROKE_ORDER),
+      katakana: buildStrokeOrderTable(KATAKANA_STROKE_ORDER),
+    };
+
+    const getStrokeOrder = (charType, char) => {
+      const data = STROKE_ORDER[charType][char];
+      const count = charType === 'hiragana' ? HIRAGANA_STROKES[char] : KATAKANA_STROKES[char];
+      // かくすう の ひょう と あわない ときは かきじゅん はんてい を しない
+      return data && data.length === count ? data : null;
+    };
+
+    // すべて の せん を 「まんなか ぞろえ・おなじ おおきさ」 に そろえる
+    const toUnitSpace = (strokes) => {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      strokes.forEach(pts => pts.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }));
+      const scale = 1 / Math.max(maxX - minX, maxY - minY, 1e-6);
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      return strokes.map(pts => ({
+        sx: (pts[0].x - cx) * scale, sy: (pts[0].y - cy) * scale,
+        ex: (pts[pts.length - 1].x - cx) * scale, ey: (pts[pts.length - 1].y - cy) * scale,
+      }));
+    };
+
+    const strokeDistance = (a, b) =>
+      Math.hypot(a.sx - b.sx, a.sy - b.sy) * 0.65 + Math.hypot(a.ex - b.ex, a.ey - b.ey) * 0.35;
+
+    const PERMUTATION_CACHE = {};
+    const getPermutations = (n) => {
+      if (PERMUTATION_CACHE[n]) return PERMUTATION_CACHE[n];
+      const result = [];
+      const build = (current, rest) => {
+        if (rest.length === 0) { result.push(current); return; }
+        rest.forEach((v, i) => build(current.concat(v), rest.slice(0, i).concat(rest.slice(i + 1))));
+      };
+      build([], Array.from({ length: n }, (_, i) => i));
+      PERMUTATION_CACHE[n] = result;
+      return result;
+    };
+
+    // ユーザー が かいた せん を 「どの かく」 に あたる か わりあてて
+    // その ならびが 1,2,3... の じゅん に なって いるか を みる
+    const judgeStrokeOrder = (userPaths, expected, tolerance) => {
+      const n = expected.length;
+      if (tolerance === null || n < 2 || n > 6) return { ok: true, wrongIndex: -1 };
+      if (userPaths.length !== n || userPaths.some(p => p.length === 0)) return { ok: true, wrongIndex: -1 };
+
+      const user = toUnitSpace(userPaths);
+      const model = toUnitSpace(expected.map(s => [{ x: s[0], y: s[1] }, { x: s[2], y: s[3] }]));
+
+      const cost = (perm) => perm.reduce((sum, target, i) => sum + strokeDistance(user[i], model[target]), 0) / n;
+
+      let bestPerm = null;
+      let bestCost = Infinity;
+      getPermutations(n).forEach(perm => {
+        const c = cost(perm);
+        if (c < bestCost) { bestCost = c; bestPerm = perm; }
+      });
+
+      const identityCost = cost(Array.from({ length: n }, (_, i) => i));
+      if (identityCost - bestCost <= tolerance) return { ok: true, wrongIndex: -1 };
+
+      const wrongIndex = bestPerm.findIndex((target, i) => target !== i);
+      return { ok: false, wrongIndex };
+    };
+
+    // おてほん の もじ が じっさい に えがかれる はんい を しらべる
+    const glyphBoxCache = {};
+    const getGlyphBox = (char) => {
+      if (glyphBoxCache[char]) return glyphBoxCache[char];
+      const canvas = document.createElement('canvas');
+      canvas.width = CANVAS_SIZE;
+      canvas.height = CANVAS_SIZE;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.font = KANA_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#000000';
+      ctx.fillText(char, CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      const data = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE).data;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let y = 0; y < CANVAS_SIZE; y += 2) {
+        for (let x = 0; x < CANVAS_SIZE; x += 2) {
+          if (data[(y * CANVAS_SIZE + x) * 4 + 3] > 50) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (minX === Infinity) return { x: 60, y: 60, w: CANVAS_SIZE - 120, h: CANVAS_SIZE - 120 };
+      const box = { x: minX, y: minY, w: Math.max(maxX - minX, 1), h: Math.max(maxY - minY, 1) };
+      glyphBoxCache[char] = box;
+      return box;
+    };
+
+    // かきじゅん データ の はんい を、じっさい の もじ が えがかれる はんい に あわせる
+    const makeStrokeMapper = (char, strokes) => {
+      const box = getGlyphBox(char);
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      strokes.forEach(s => [[s[0], s[1]], [s[2], s[3]]].forEach(([x, y]) => {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }));
+      const rangeX = maxX - minX;
+      const rangeY = maxY - minY;
+      return (x, y) => ({
+        x: box.x + (rangeX < 1e-6 ? 0.5 : (x - minX) / rangeX) * box.w,
+        y: box.y + (rangeY < 1e-6 ? 0.5 : (y - minY) / rangeY) * box.h,
+      });
+    };
+
+    const drawStrokeNumbers = (ctx, char, strokes, strong) => {
+      const toCanvas = makeStrokeMapper(char, strokes);
+
+      // ばんごう が かさなる ときは かく の むき に すこし ずらす
+      const placed = [];
+      strokes.forEach(stroke => {
+        const from = toCanvas(stroke[0], stroke[1]);
+        const to = toCanvas(stroke[2], stroke[3]);
+        let t = 0;
+        let pos = from;
+        while (t < 0.5 && placed.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 46)) {
+          t += 0.1;
+          pos = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+        }
+        placed.push(pos);
+      });
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      placed.forEach((pos, i) => {
+        const cx = pos.x;
+        const cy = pos.y;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+        ctx.fillStyle = strong ? 'rgba(224, 122, 95, 0.95)' : 'rgba(129, 178, 154, 0.75)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 26px "M PLUS Rounded 1c", sans-serif';
+        ctx.fillText(String(i + 1), cx, cy + 1);
+      });
+      ctx.restore();
+    };
+
     const App = () => {
       const [isFontLoaded, setIsFontLoaded] = useState(false);
       useEffect(() => {
@@ -125,7 +444,7 @@
       const [hasMistaked, setHasMistaked] = useState(false);
       
       const [penSize, setPenSize] = useState(25);
-      const [difficulty, setDifficulty] = useState(0.60);
+      const [difficultyKey, setDifficultyKey] = useState('normal');
       const [useDakuon, setUseDakuon] = useState(false);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
       
@@ -137,7 +456,7 @@
       const isDrawingRef = useRef(false);
       const activeCanvasIndexRef = useRef(null);
 
-      const CANVAS_SIZE = 400;
+      const level = DIFFICULTY_LEVELS[difficultyKey];
 
       const targetChars = questions.length > 0 
         ? (playMode === 'char' ? [questions[currentIndex]] : questions[currentIndex].split(''))
@@ -250,16 +569,22 @@
             bgCtx.restore();
 
             if (char) {
-              bgCtx.font = `340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif`;
+              bgCtx.font = KANA_FONT;
               bgCtx.textAlign = 'center';
               bgCtx.textBaseline = 'middle';
-              
+
               if (currentStep === 'trace') {
-                bgCtx.fillStyle = 'rgba(61, 64, 91, 0.15)'; 
+                bgCtx.fillStyle = 'rgba(61, 64, 91, 0.15)';
                 bgCtx.fillText(char, bgCanvas.width / 2, bgCanvas.height / 2);
               } else if (currentStep === 'retry_trace') {
-                bgCtx.fillStyle = 'rgba(224, 122, 95, 0.25)'; 
+                bgCtx.fillStyle = 'rgba(224, 122, 95, 0.25)';
                 bgCtx.fillText(char, bgCanvas.width / 2, bgCanvas.height / 2);
+              }
+
+              // おてほん を みる ステップ では かきじゅん の ばんごう も みせる
+              const strokes = getStrokeOrder(charType, char);
+              if (strokes && strokes.length > 1 && currentStep !== 'blind') {
+                drawStrokeNumbers(bgCtx, char, strokes, currentStep === 'retry_trace');
               }
             }
           }
@@ -360,7 +685,7 @@
           targetCanvas.width = width;
           targetCanvas.height = height;
           const targetCtx = targetCanvas.getContext('2d', { willReadFrequently: true });
-          targetCtx.font = `340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif`;
+          targetCtx.font = KANA_FONT;
           targetCtx.textAlign = 'center';
           targetCtx.textBaseline = 'middle';
           targetCtx.fillStyle = '#FF0000';
@@ -371,7 +696,7 @@
           targetCanvasFat.width = width;
           targetCanvasFat.height = height;
           const targetCtxFat = targetCanvasFat.getContext('2d', { willReadFrequently: true });
-          targetCtxFat.font = `340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif`;
+          targetCtxFat.font = KANA_FONT;
           targetCtxFat.textAlign = 'center';
           targetCtxFat.textBaseline = 'middle';
           targetCtxFat.fillStyle = '#FF0000';
@@ -431,27 +756,37 @@
 
           const coverRate = targetPixelCount === 0 ? 0 : coveredPixelCount / targetPixelCount;
           const insideRate = userPixelCount === 0 ? 0 : userInsideFatCount / userPixelCount;
-          const isNotCheating = userPixelCount < targetPixelCount * 3.5; 
-          
+          const isNotCheating = userPixelCount < targetPixelCount * level.cheat;
+
           const userStrokeCount = paths.length;
           const isStrokeCorrect = userStrokeCount === targetStrokeCount;
 
-          let finalDifficulty = difficulty || 0.60;
+          let coverThreshold = level.cover;
           if (targetStrokeCount <= 2) {
-            finalDifficulty -= 0.15; 
+            coverThreshold -= 0.15;
           } else if (targetStrokeCount <= 4) {
-            finalDifficulty -= 0.10; 
+            coverThreshold -= 0.10;
           }
-          finalDifficulty = Math.max(0.30, finalDifficulty);
+          coverThreshold = Math.max(level.minCover, coverThreshold);
 
-          const isCorrect = isStrokeCorrect && (coverRate >= finalDifficulty) && (insideRate >= 0.70) && isNotCheating;
-          
+          const isShapeCorrect = (coverRate >= coverThreshold) && (insideRate >= level.inside) && isNotCheating;
+
+          // かたち と かくすう が あって いる ときだけ かきじゅん を みる
+          const strokeOrderData = getStrokeOrder(charType, char);
+          const orderResult = (isStrokeCorrect && isShapeCorrect && strokeOrderData)
+            ? judgeStrokeOrder(paths, strokeOrderData, level.orderTolerance)
+            : { ok: true, wrongIndex: -1 };
+
+          const isCorrect = isStrokeCorrect && isShapeCorrect && orderResult.ok;
+
           if (!isCorrect) {
             allCorrect = false;
             if (!firstErrorMsg) {
               const displayIdx = targetChars.length > 1 ? `${idx + 1}もじめの ` : '';
               if (!isStrokeCorrect) {
                 firstErrorMsg = `${displayIdx}かくすう が ちがうよ！\n(せいかいは ${targetStrokeCount} かく)`;
+              } else if (!orderResult.ok) {
+                firstErrorMsg = `${displayIdx}かきじゅん が ちがうよ！\n(${orderResult.wrongIndex + 1} かくめ を みてね)`;
               } else {
                 firstErrorMsg = `${displayIdx}かたちが すこし ちがうみたい`;
               }
@@ -488,11 +823,13 @@
               const bgCanvas = bgCanvasRefs.current[idx];
               if (bgCanvas) {
                 const bgCtx = bgCanvas.getContext('2d');
-                bgCtx.font = `340px "UD Digi Kyokasho N-B", "UD デジタル 教科書体 N-B", "Klee One", serif`;
+                bgCtx.font = KANA_FONT;
                 bgCtx.textAlign = 'center';
                 bgCtx.textBaseline = 'middle';
                 bgCtx.fillStyle = 'rgba(224, 122, 95, 0.4)';
                 bgCtx.fillText(char, bgCanvas.width / 2, bgCanvas.height / 2);
+                const strokes = getStrokeOrder(charType, char);
+                if (strokes && strokes.length > 1) drawStrokeNumbers(bgCtx, char, strokes, true);
               }
             });
           }
@@ -531,7 +868,18 @@
                 <h2 className="font-rounded text-2xl sm:text-3xl font-bold mb-6 text-center text-bluegrey border-b-2 border-sage pb-2">せってい</h2>
                 <div className="mb-8"><p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">もんだいの しゅるい</p><button onClick={() => setUseDakuon(!useDakuon)} className={`w-full py-4 px-4 rounded-xl border-2 font-rounded font-bold text-lg transition-all flex flex-col items-center justify-center gap-1 ${useDakuon ? 'bg-sage border-sage text-white shadow-inner' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}><span>だくおん・はんだくおん</span><span className="text-sm font-normal opacity-90">(が・ぱ など 点々や丸がつく文字)</span><span className="mt-1 text-base">{useDakuon ? 'ON (でる)' : 'OFF (でない)'}</span></button></div>
                 <div className="mb-8"><p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">ペンの ふとさ</p><div className="flex justify-center gap-4 sm:gap-6">{[{ size: 15, label: 'ほそい' }, { size: 25, label: 'ふつう' }, { size: 35, label: 'ふとい' }].map(p => (<button key={p.size} onClick={() => setPenSize(p.size)} className={`w-20 h-20 rounded-full flex flex-col items-center justify-center border-2 transition-all ${penSize === p.size ? 'bg-sage border-sage text-white shadow-inner scale-110' : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-50'}`}><div className="bg-current rounded-full mb-1" style={{ width: p.size/3, height: p.size/3 }}></div><span className="font-rounded text-xs">{p.label}</span></button>))}</div></div>
-                <div className="mb-8"><p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">はんていの きびしさ</p><div className="flex justify-center gap-2 sm:gap-4">{[{ rate: 0.55, label: 'かんたん' }, { rate: 0.60, label: 'ふつう' }, { rate: 0.65, label: 'むずかしい' }].map(d => (<button key={d.rate} onClick={() => setDifficulty(d.rate)} className={`px-3 py-3 sm:px-4 sm:py-4 font-rounded text-sm sm:text-base rounded-xl transition-all ${difficulty === d.rate ? 'bg-sage text-white shadow-inner' : 'bg-white border border-gray-300 text-gray-500 hover:bg-gray-50'}`}>{d.label}</button>))}</div></div>
+                <div className="mb-8">
+                  <p className="font-rounded text-bluegrey/80 mb-3 text-lg sm:text-xl text-center">はんていの レベル</p>
+                  <div className="flex justify-center gap-2 sm:gap-3">
+                    {Object.keys(DIFFICULTY_LEVELS).map(key => (
+                      <button key={key} onClick={() => setDifficultyKey(key)} className={`flex-1 px-2 py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-start gap-1 ${difficultyKey === key ? 'bg-sage border-sage text-white shadow-inner' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}>
+                        <span className="font-rounded font-bold text-sm sm:text-base">{DIFFICULTY_LEVELS[key].label}</span>
+                        <span className="font-rounded text-[10px] sm:text-xs leading-tight text-center whitespace-pre-line opacity-90">{DIFFICULTY_LEVELS[key].desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="font-rounded text-xs sm:text-sm text-bluegrey/60 mt-3 text-center leading-relaxed">{DIFFICULTY_LEVELS[difficultyKey].hint}</p>
+                </div>
                 <button onClick={() => setIsSettingsOpen(false)} className="w-full bg-terracotta text-white font-rounded py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl transition-all">とじる</button>
               </div>
             </div>
