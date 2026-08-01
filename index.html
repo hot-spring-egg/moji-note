@@ -130,28 +130,34 @@
     //   direction : かく の むき が ぎゃく に なって いないか
     //            'axis' = よこぼう・たてぼう だけ / 'all' = ななめ の かく も みる
     //   orderTolerance : かきじゅん はんてい の きびしさ (null = はんてい しない)
+    //   penetrate : つきぬけ の はんてい (もじ の おおきさ を 1 と した わりあい)
+    //            depth = つきぬけた さき が これ だけ のびて いれば 「つきぬけた」
+    //            tail  = 「の」 など で、こうさ した さき が でて いい ながさ
     // ---------------------------------------------------------------
     const DIFFICULTY_LEVELS = {
       easy: {
         label: 'かんたん',
         desc: 'かたち と\nむき を みるよ',
-        hint: 'かくすう・だいたい の かたち・かく ばしょ と むき を みます。はじめて の ひと むけ。',
+        hint: 'かくすう・だいたい の かたち・かく ばしょ と むき・つきぬけ を みます。はじめて の ひと むけ。',
         cover: 0.50, inside: 0.40, cheat: 4.0, orderTolerance: null,
         pos: 0.28, direction: 'axis',
+        penetrate: { depth: 0.035, tail: 0.20 },
       },
       normal: {
         label: 'ふつう',
         desc: 'かきじゅん も\nみるよ',
-        hint: 'かたち・かく ばしょ・かく むき に くわえて、かきじゅん も やさしく みます。',
+        hint: 'かたち・かく ばしょ・かく むき・つきぬけ に くわえて、かきじゅん も やさしく みます。',
         cover: 0.62, inside: 0.52, cheat: 3.5, orderTolerance: 0.30,
         pos: 0.23, direction: 'all',
+        penetrate: { depth: 0.045, tail: 0.16 },
       },
       hard: {
         label: 'むずかしい',
         desc: 'かきじゅん を\nしっかり みるよ',
-        hint: 'かたち も かく ばしょ も かきじゅん も しっかり みます。じしん が ついたら ちょうせん！',
+        hint: 'かたち も かく ばしょ も つきぬけ も かきじゅん も しっかり みます。じしん が ついたら ちょうせん！',
         cover: 0.70, inside: 0.62, cheat: 3.0, orderTolerance: 0.16,
         pos: 0.19, direction: 'all',
+        penetrate: { depth: 0.055, tail: 0.13 },
       },
     };
 
@@ -290,6 +296,78 @@
       katakana: buildStrokeOrderTable(KATAKANA_STROKE_ORDER),
     };
 
+    // ---------------------------------------------------------------
+    // つきぬけ の きまり
+    //   cross: [a, b] = 「a かくめ は b かくめ を つきぬける」
+    //                   (0 から かぞえた かく の ばんごう)
+    //   selfTail = 「の」 の よう に じぶん の せん と こうさ する もじ。
+    //              こうさ した さき が でっぱり すぎて いない か を みる
+    // ※ おてほん と かさなる ピクセル だけ を みて いると、せん が
+    //    てまえ で とまって いて も ◯ に なって しまう ため べつ に はんてい する
+    // ※ 「ね」「は」「ほ」「け」 の よう に、もともと はみだし が
+    //    ほんの すこし の かく は きびしく しすぎない よう に いれない
+    // ---------------------------------------------------------------
+    const HIRAGANA_PENETRATION = {
+      'あ': { cross: [[1, 0], [2, 1]] },
+      'お': { cross: [[1, 0]] },
+      'か': { cross: [[1, 0]] },
+      'き': { cross: [[2, 0], [2, 1]] },
+      'さ': { cross: [[1, 0]] },
+      'す': { cross: [[1, 0]] },
+      'せ': { cross: [[1, 0], [2, 0]] },
+      'た': { cross: [[1, 0]] },
+      'ち': { cross: [[1, 0]] },
+      'な': { cross: [[1, 0]] },
+      'ぬ': { cross: [[1, 0]] },
+      'の': { selfTail: true },
+      'ま': { cross: [[2, 0], [2, 1]] },
+      'む': { cross: [[1, 0]] },
+      'め': { cross: [[1, 0]] },
+      'も': { cross: [[1, 0], [2, 0]] },
+      'や': { cross: [[2, 0]] },
+      'ゆ': { cross: [[1, 0]] },
+      'よ': { cross: [[1, 0]] },
+      'を': { cross: [[1, 0], [2, 1]] },
+    };
+
+    const KATAKANA_PENETRATION = {
+      'オ': { cross: [[1, 0]] },
+      'カ': { cross: [[1, 0]] },
+      'キ': { cross: [[2, 0], [2, 1]] },
+      'サ': { cross: [[1, 0], [2, 0]] },
+      'セ': { cross: [[1, 0]] },
+      'チ': { cross: [[2, 1]] },
+      'ナ': { cross: [[1, 0]] },
+      'ヌ': { cross: [[1, 0]] },
+      'ホ': { cross: [[1, 0]] },
+      'メ': { cross: [[1, 0]] },
+      'モ': { cross: [[2, 0], [2, 1]] },
+      'ヤ': { cross: [[1, 0]] },
+    };
+
+    // だくてん(゛)は 1つ まえ、はんだくてん(゜)は 2つ まえ が もと の もじ
+    const HANDAKUON_CHARS = 'ぱぴぷぺぽパピプペポ';
+
+    // だくてん・はんだくてん は さいご に つく ので かく の ばんごう は そのまま
+    const buildPenetrationTable = (base) => {
+      const table = Object.assign({}, base);
+      Object.keys(SMALL_KANA_BASE).forEach(small => {
+        const src = base[SMALL_KANA_BASE[small]];
+        if (src) table[small] = src;
+      });
+      [...HIRAGANA_DAKUON, ...KATAKANA_DAKUON].forEach(char => {
+        const back = HANDAKUON_CHARS.indexOf(char) >= 0 ? 2 : 1;
+        const src = base[String.fromCharCode(char.charCodeAt(0) - back)];
+        if (src) table[char] = src;
+      });
+      return table;
+    };
+
+    const PENETRATION = {
+      hiragana: buildPenetrationTable(HIRAGANA_PENETRATION),
+      katakana: buildPenetrationTable(KATAKANA_PENETRATION),
+    };
+
     const getStrokeOrder = (charType, char) => {
       const data = STROKE_ORDER[charType][char];
       const count = charType === 'hiragana' ? HIRAGANA_STROKES[char] : KATAKANA_STROKES[char];
@@ -426,6 +504,159 @@
         if (reversed) return { ok: false, wrongIndex: i, hint: strokeDirectionHint(mdx, mdy) };
       }
       return { ok: true, wrongIndex: -1 };
+    };
+
+    // ---------------------------------------------------------------
+    // つきぬけ の はんてい (せん と せん の こうさ を しらべる)
+    // ---------------------------------------------------------------
+
+    // せんぶん どうし が まじわる ところ (まじわらない ときは null)
+    const segmentCross = (p1, p2, p3, p4) => {
+      const ax = p2.x - p1.x, ay = p2.y - p1.y;
+      const bx = p4.x - p3.x, by = p4.y - p3.y;
+      const den = ax * by - ay * bx;
+      if (Math.abs(den) < 1e-9) return null;
+      const t = ((p3.x - p1.x) * by - (p3.y - p1.y) * bx) / den;
+      const u = ((p3.x - p1.x) * ay - (p3.y - p1.y) * ax) / den;
+      if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+      return { t, u, x: p1.x + ax * t, y: p1.y + ay * t };
+    };
+
+    // せん の はじめ から の ながさ の ひょう
+    const pathLengths = (path) => {
+      const acc = [0];
+      for (let i = 1; i < path.length; i++) {
+        acc.push(acc[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y));
+      }
+      return acc;
+    };
+
+    const lengthAt = (acc, path, i, t) =>
+      acc[i] + Math.hypot(path[i + 1].x - path[i].x, path[i + 1].y - path[i].y) * t;
+
+    // ちかすぎる てん を まびいて、こうさ しらべ を かるく する
+    const PEN_SAMPLE_GAP = 3;
+    const simplifyPath = (path) => {
+      if (!path || path.length < 2) return path ? path.slice() : [];
+      const out = [path[0]];
+      for (let i = 1; i < path.length; i++) {
+        const last = out[out.length - 1];
+        if (Math.hypot(path[i].x - last.x, path[i].y - last.y) >= PEN_SAMPLE_GAP) out.push(path[i]);
+      }
+      const end = path[path.length - 1];
+      const last = out[out.length - 1];
+      if (last.x !== end.x || last.y !== end.y) out.push(end);
+      return out;
+    };
+
+    // せん a と せん b が こうさ する ところ を さがす。
+    // ふかさ = こうさてん から せん の りょうがわ に のこって いる ながさ
+    // (a は 「つきぬける がわ」、b は 「つきぬけられる がわ」。
+    //  b の はしっこ を かすめた だけ の こうさ を 「つきぬけ」 と しない ため
+    //  b の ふかさ も みる が、a より ゆるく みる)
+    const crossDepth = (pathA, pathB) => {
+      if (!pathA || !pathB || pathA.length < 2 || pathB.length < 2) return null;
+      const accA = pathLengths(pathA);
+      const accB = pathLengths(pathB);
+      const totalA = accA[accA.length - 1];
+      const totalB = accB[accB.length - 1];
+      if (totalA < 1e-6 || totalB < 1e-6) return null;
+      let best = null;
+      for (let i = 0; i + 1 < pathA.length; i++) {
+        for (let j = 0; j + 1 < pathB.length; j++) {
+          const hit = segmentCross(pathA[i], pathA[i + 1], pathB[j], pathB[j + 1]);
+          if (!hit) continue;
+          const la = lengthAt(accA, pathA, i, hit.t);
+          const lb = lengthAt(accB, pathB, j, hit.u);
+          const depthA = Math.min(la, totalA - la);
+          const depthB = Math.min(lb, totalB - lb);
+          const score = Math.min(depthA, depthB);
+          if (!best || score > best.score) best = { score, depthA, depthB, x: hit.x, y: hit.y };
+        }
+      }
+      return best;
+    };
+
+    // じぶん の せん と こうさ する ところ (「の」 の みぎうえ など)。
+    // こうさてん から ちかい ほう の さきっぽ まで の ながさ を かえす
+    const selfCrossReach = (path, minLoop) => {
+      if (!path || path.length < 4) return null;
+      const acc = pathLengths(path);
+      let best = null;
+      for (let i = 0; i + 1 < path.length; i++) {
+        for (let j = i + 2; j + 1 < path.length; j++) {
+          const hit = segmentCross(path[i], path[i + 1], path[j], path[j + 1]);
+          if (!hit) continue;
+          const loop = lengthAt(acc, path, j, hit.u) - lengthAt(acc, path, i, hit.t);
+          if (loop < minLoop) continue;
+          if (best && loop <= best.loop) continue;
+          const head = Math.hypot(path[0].x - hit.x, path[0].y - hit.y);
+          const tail = Math.hypot(path[path.length - 1].x - hit.x, path[path.length - 1].y - hit.y);
+          best = { loop, reach: Math.min(head, tail) };
+        }
+      }
+      return best;
+    };
+
+    // かいた せん を おてほん の どの かく に あてはめる か を きめる
+    // (かきじゅん が ちがって いて も、かたち で ただしく くらべる ため)
+    const matchStrokesToModel = (userPaths, expected) => {
+      const n = expected.length;
+      const identity = Array.from({ length: n }, (_, i) => i);
+      if (userPaths.length !== n || n < 2 || n > 6) return identity;
+      if (userPaths.some(p => !p || p.length === 0)) return identity;
+
+      const user = toUnitSpace(userPaths);
+      const model = toUnitSpace(expected.map(s => [{ x: s[0], y: s[1] }, { x: s[2], y: s[3] }]));
+
+      let bestPerm = identity;
+      let bestCost = Infinity;
+      getPermutations(n).forEach(perm => {
+        const c = perm.reduce((sum, target, i) => sum + strokeDistance(user[i], model[target]), 0);
+        if (c < bestCost) { bestCost = c; bestPerm = perm; }
+      });
+
+      // perm[かいた ばんごう] = おてほん の ばんごう → ぎゃく に ならべかえる
+      const map = identity.slice();
+      bestPerm.forEach((modelIdx, userIdx) => { map[modelIdx] = userIdx; });
+      return map;
+    };
+
+    // 「の」 の ような 1かく の わ で、みとめる わ の おおきさ (もじ の おおきさ ひ)
+    const SELF_LOOP_MIN = 0.8;
+    // つきぬけられる がわ の ふかさ は これ だけ ゆるく みる
+    const CROSSED_DEPTH_RATIO = 0.6;
+
+    const judgePenetration = (paths, char, charType, expected, size, level) => {
+      const rules = PENETRATION[charType][char];
+      const limit = level.penetrate;
+      if (!rules || !limit) return { ok: true };
+
+      const simple = paths.map(simplifyPath);
+
+      if (rules.cross) {
+        const map = matchStrokesToModel(paths, expected);
+        for (let k = 0; k < rules.cross.length; k++) {
+          const [a, b] = rules.cross[k];
+          const pathA = simple[map[a]];
+          const pathB = simple[map[b]];
+          if (!pathA || !pathB || pathA.length < 2 || pathB.length < 2) continue;
+          const hit = crossDepth(pathA, pathB);
+          if (!hit || hit.depthA < limit.depth * size ||
+              hit.depthB < limit.depth * CROSSED_DEPTH_RATIO * size) {
+            return { ok: false, kind: 'missing', strokeA: a, strokeB: b };
+          }
+        }
+      }
+
+      if (rules.selfTail) {
+        const self = selfCrossReach(simple[0], SELF_LOOP_MIN * size);
+        if (self && self.reach > limit.tail * size) {
+          return { ok: false, kind: 'tooMuch', strokeA: 0 };
+        }
+      }
+
+      return { ok: true };
     };
 
     // おてほん の もじ が じっさい に えがかれる はんい を しらべる
@@ -621,6 +852,16 @@
 
       const strokeOrderData = getStrokeOrder(charType, char);
       if (strokeOrderData) {
+        // つきぬける はず の せん が とちゅう で とまって いないか /
+        // つきぬけ なくて いい ところ が でっぱって いないか
+        const box = getGlyphBox(char);
+        const penResult = judgePenetration(
+          aligned, char, charType, strokeOrderData, Math.max(box.w, box.h), level);
+        if (!penResult.ok) {
+          return { ok: false, reason: 'penetration', kind: penResult.kind,
+            strokeA: penResult.strokeA, strokeB: penResult.strokeB, coverRate, insideRate };
+        }
+
         const orderResult = judgeStrokeOrder(paths, strokeOrderData, level.orderTolerance);
         if (!orderResult.ok) return { ok: false, reason: 'order', wrongIndex: orderResult.wrongIndex, coverRate, insideRate };
 
@@ -693,7 +934,9 @@
     window.__mojiNoteTest = {
       judgeCharacter, judgeStrokeOrder, judgeStrokeDirection, alignPathsToGlyph, getGlyphBox,
       makeStrokeMapper, positionHint, strokeDirectionHint,
+      judgePenetration, crossDepth, selfCrossReach, matchStrokesToModel,
       getStrokeOrder, DIFFICULTY_LEVELS, HIRAGANA_STROKES, KATAKANA_STROKES, STROKE_ORDER,
+      PENETRATION,
     };
 
     const App = () => {
@@ -948,6 +1191,10 @@
               firstErrorMsg = `${displayIdx}かきじゅん が ちがうよ！\n(${result.wrongIndex + 1} かくめ を みてね)`;
             } else if (result.reason === 'direction') {
               firstErrorMsg = `${displayIdx}かく むき が ぎゃく だよ！\n(${result.wrongIndex + 1} かくめ は ${result.hint})`;
+            } else if (result.reason === 'penetration') {
+              firstErrorMsg = result.kind === 'tooMuch'
+                ? `${displayIdx}つきぬけ すぎ だよ！\n(さきっぽ を ながく ださないでね)`
+                : `${displayIdx}つきぬけて いないよ！\n(${result.strokeA + 1} かくめ は ${result.strokeB + 1} かくめ を つきぬけよう)`;
             } else if (result.reason === 'position') {
               firstErrorMsg = `${displayIdx}かく ばしょ が ずれて いるよ！\n(${positionHint(result.offsetX, result.offsetY)})`;
             } else if (result.reason === 'small') {
